@@ -1,6 +1,6 @@
 # Instalación (una sola vez)
 
-Toma unos 30 minutos. Necesitas acceso a la organización de GitHub `CapacitacionDesarrolloUN` y un correo institucional.
+Toma unos 20 minutos. Necesitas acceso a la organización de GitHub `CapacitacionDesarrolloUN`, un correo institucional y las dos contraseñas que vas a usar (administrador y diseñador).
 
 > **Importante para el traspaso:** crea las cuentas de Cloudflare y de Google con un **correo institucional del área** (ideal: un buzón compartido de Capacitación), no con un correo personal. Si eso no es posible, usa tu correo institucional y agrega a un segundo miembro del área en cada cuenta (ver [TRASPASO.md](TRASPASO.md)).
 
@@ -16,41 +16,30 @@ En el primer despliegue Cloudflare crea solo la base de datos `programacion-curs
 
 Si el despliegue falla porque no pudo crear la base de datos o el almacenamiento, créalos a mano (D1 con nombre `programacion-cursos`; R2 con nombre `programacion-cursos-imagenes`). Después copia el **Database ID** de D1 en `wrangler.jsonc`, dentro de `d1_databases`, como `"database_id": "..."`, y vuelve a desplegar.
 
-## 2. Inicio de sesión (Cloudflare Access)
-
-1. En el Worker: **Settings → Domains & Routes**. En la fila `workers.dev`, activa **Cloudflare Access**. Si Cloudflare pide un nombre de equipo para Zero Trust, elige uno corto, por ejemplo `capacitacion-uninorte`. El plan gratuito sirve hasta para 50 personas.
-2. Ve a **Zero Trust → Access → Applications**, abre la aplicación que se creó y edita su política:
-   - Action: **Allow**
-   - Include: **Emails ending in** `@uninorte.edu.co`
-
-   Así entra cualquier correo de Uninorte al inicio de sesión, pero la app solo deja pasar a quien esté en su lista de accesos. Gracias a eso, los cambios de personas se hacen desde la app y no hay que volver a Cloudflare.
-3. Copia dos datos:
-   - En la aplicación de Access: **Application Audience (AUD) Tag**.
-   - En **Zero Trust → Settings**: el **team domain**, por ejemplo `capacitacion-uninorte.cloudflareaccess.com`.
-
-## 3. Google Gemini: generación de imágenes
+## 2. Google Gemini: generación de imágenes
 
 1. Entra a <https://aistudio.google.com/apikey> con la cuenta institucional y crea una llave (**Create API key**).
 2. Activa la facturación del proyecto (**Set up billing**). La generación de imágenes no está en el nivel gratuito. El costo es de unos US$0,039 por imagen. Como referencia, 80 imágenes al mes cuestan cerca de US$3.
 3. Recomendado: en Google Cloud Billing, crea un **presupuesto con alerta** de US$10 al mes para enterarte de cualquier uso fuera de lo normal.
 
-## 4. Variables del Worker
+## 3. Contraseñas y llave
 
-En el Worker: **Settings → Variables and Secrets → Add**:
+En el Worker: **Settings → Variables and Secrets → Add**. Agrega los tres como tipo **Secret**:
 
-| Nombre | Tipo | Valor |
-|---|---|---|
-| `GEMINI_API_KEY` | Secret | La llave de Google AI Studio |
-| `ACCESS_TEAM_DOMAIN` | Text | El team domain del paso 2 |
-| `ACCESS_AUD` | Text | El AUD Tag del paso 2 |
-| `ADMIN_INICIAL` | Text | Tu correo, por ejemplo `nombre@uninorte.edu.co` |
+| Nombre | Valor |
+|---|---|
+| `GEMINI_API_KEY` | La llave de Google AI Studio |
+| `CLAVE_ADMIN` | Contraseña inicial del administrador |
+| `CLAVE_DISENADOR` | Contraseña inicial del diseñador |
 
-Guarda los cambios (**Deploy**). `ADMIN_INICIAL` siempre es administrador. Sirve para el primer ingreso y para recuperar el acceso si algún día la app queda sin administradores.
+Guarda los cambios (**Deploy**). Las contraseñas **nunca** se escriben en el código, porque el repositorio es público.
 
-## 5. Primer uso
+Las dos contraseñas solo se leen de aquí la primera vez. Después viven cifradas en la base de datos y se cambian desde la app, en **Ajustes → Contraseñas**. Por eso, cambiar estos secretos más adelante no tiene efecto; para recuperar el acceso, ver [MANTENIMIENTO.md](MANTENIMIENTO.md).
 
-1. Abre la dirección `workers.dev`, escribe tu correo y pon el código que te llega.
-2. En **Accesos**, agrega el correo del colaborador con rol *Colaborador*.
-3. En **Programar cursos**, registra un curso de prueba. Luego, en **Vista colaborador**, genera su imagen para confirmar que la llave de Google funciona.
+## 4. Primer uso
 
-Listo. Guarda la dirección de la app en favoritos y compártela con el colaborador.
+1. Abre la dirección `workers.dev` y entra con la contraseña de administrador.
+2. En **Programar cursos**, registra un curso de prueba.
+3. Sal, entra con la contraseña de diseñador y genera la imagen del curso para confirmar que la llave de Google funciona.
+
+Listo. Guarda la dirección de la app en favoritos y compártela con el diseñador junto con su contraseña.

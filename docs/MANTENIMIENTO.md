@@ -10,7 +10,7 @@ La app casi no necesita mantenimiento. Estos son los casos que pueden aparecer c
 
 ## Las imágenes no salen como se quiere
 
-Un administrador puede ajustar la instrucción en **Ajustes → Instrucción para las imágenes**. `{titulo}` se reemplaza por el nombre del curso. El colaborador también puede escribir una indicación puntual en cada curso, por ejemplo "personas en un laboratorio".
+Un administrador puede ajustar la instrucción en **Ajustes → Instrucción para las imágenes**. `{titulo}` se reemplaza por el nombre del curso. El diseñador también puede escribir una indicación puntual en cada curso, por ejemplo "personas en un laboratorio".
 
 ## Revisar el gasto
 
@@ -20,6 +20,16 @@ Un administrador puede ajustar la instrucción en **Ajustes → Instrucción par
 ## Error "exceeded CPU" o la app responde lento
 
 El plan gratuito de Cloudflare Workers limita el tiempo de procesamiento por petición. Si al generar imágenes aparece ese error de forma repetida, activa **Workers Paid** (US$5 al mes) en Cloudflare → Workers & Pages → Plans.
+
+## Olvidé la contraseña
+
+1. En Cloudflare → Worker → **Settings → Variables and Secrets**, pon una contraseña nueva en `CLAVE_ADMIN` (o `CLAVE_DISENADOR`) y despliega.
+2. En Cloudflare → **D1 → programacion-cursos → Console**, ejecuta:
+   ```sql
+   DELETE FROM ajustes WHERE clave = 'clave_admin';
+   ```
+   (o `'clave_disenador'` para la del diseñador).
+3. Abre la app. En ese momento toma la contraseña del secreto. Ya puedes entrar y, si quieres, cambiarla desde **Ajustes**.
 
 ## Cambiar la llave de Google
 

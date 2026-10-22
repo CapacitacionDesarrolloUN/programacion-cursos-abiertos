@@ -1,3 +1,5 @@
+import { prepararSesiones } from './sesion.js';
+
 // Estructura de la base de datos. Las tablas se crean solas la primera vez que
 // la app recibe una petición, así no hay que correr migraciones a mano.
 
@@ -8,12 +10,6 @@ Style: candid documentary photography, natural light, true-to-life colors, real 
 Strictly no text of any kind: no letters, words, numbers, captions, signs, screens with writing, logos or watermarks.`;
 
 const ESQUEMA = [
-  `CREATE TABLE IF NOT EXISTS usuarios (
-    email TEXT PRIMARY KEY,
-    nombre TEXT NOT NULL DEFAULT '',
-    rol TEXT NOT NULL CHECK (rol IN ('admin', 'colaborador')),
-    creado_en TEXT NOT NULL DEFAULT (datetime('now'))
-  )`,
   `CREATE TABLE IF NOT EXISTS cursos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT NOT NULL,
@@ -34,19 +30,24 @@ const ESQUEMA = [
   `CREATE TABLE IF NOT EXISTS generaciones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     curso_id INTEGER,
-    email TEXT,
+    rol TEXT,
+    creado_en TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  `CREATE TABLE IF NOT EXISTS intentos (
+    ip TEXT NOT NULL,
     creado_en TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
 ];
 
 let listo = false;
 
-export async function prepararBase(db) {
+export async function prepararBase(db, env) {
   if (listo) return;
   await db.batch(ESQUEMA.map((sql) => db.prepare(sql)));
   await db
     .prepare(`INSERT OR IGNORE INTO ajustes (clave, valor) VALUES ('prompt', ?)`)
     .bind(PROMPT_POR_DEFECTO)
     .run();
+  await prepararSesiones(db, env);
   listo = true;
 }

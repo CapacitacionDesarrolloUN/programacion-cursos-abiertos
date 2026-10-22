@@ -42,6 +42,9 @@ async function api(ruta, opciones = {}) {
     body: opciones.body ? JSON.stringify(opciones.body) : undefined,
   });
   const datos = await res.json().catch(() => ({}));
+  if (res.status === 401 && datos.sin_sesion && estado.yo) {
+    location.reload();
+  }
   if (!res.ok) {
     const error = new Error(datos.error || `Error ${res.status}`);
     Object.assign(error, datos, { estado: res.status });
@@ -130,19 +133,24 @@ async function iniciar() {
   try {
     estado.yo = await api('yo');
   } catch (e) {
+    if (e.sin_sesion) return pantallaIngreso();
     $app.innerHTML = `
       <section class="vacio">
-        <h1>${e.sin_acceso ? 'Sin acceso' : 'No se pudo abrir la app'}</h1>
+        <h1>No se pudo abrir la app</h1>
         <p>${esc(e.message)}</p>
       </section>`;
     return;
   }
 
-  $quien.innerHTML = `<span>${esc(estado.yo.nombre || estado.yo.email)}</span>
-    <span class="rol">${estado.yo.rol === 'admin' ? 'Administrador' : 'Colaborador'}</span>`;
+  $quien.innerHTML = `<span class="rol">${estado.yo.rol === 'admin' ? 'Administrador' : 'Diseñador'}</span>
+    <button type="button" class="enlace" id="salir">Salir</button>`;
+  document.getElementById('salir').addEventListener('click', async () => {
+    await api('salir', { method: 'POST' }).catch(() => {});
+    location.reload();
+  });
 
   const vistas = estado.yo.rol === 'admin'
-    ? [['programar', 'Programar cursos'], ['cursos', 'Vista colaborador'], ['accesos', 'Accesos'], ['ajustes', 'Ajustes']]
+    ? [['programar', 'Programar cursos'], ['cursos', 'Vista diseñador'], ['ajustes', 'Ajustes']]
     : [['cursos', 'Cursos']];
   if (vistas.length > 1) {
     $pestanas.hidden = false;
@@ -158,11 +166,40 @@ async function iniciar() {
   irA(vistas.some(([id]) => id === guardada) ? guardada : vistas[0][0]);
 }
 
+function pantallaIngreso() {
+  $app.innerHTML = `
+    <section class="ingreso">
+      <h1>Ingresar</h1>
+      <p class="sutil">Escribe tu contraseña. Según la contraseña entras como administrador o como diseñador.</p>
+      <form id="form-ingreso">
+        <label>Contraseña
+          <input name="clave" type="password" autocomplete="current-password" required autofocus>
+        </label>
+        <p id="error-ingreso" class="peligro pequeno" role="alert"></p>
+        <button type="submit" class="primario">Entrar</button>
+      </form>
+    </section>`;
+  const form = document.getElementById('form-ingreso');
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const boton = form.querySelector('button');
+    boton.disabled = true;
+    try {
+      await api('ingresar', { method: 'POST', body: { clave: form.clave.value } });
+      location.reload();
+    } catch (e) {
+      document.getElementById('error-ingreso').textContent = e.message;
+      form.clave.select();
+      boton.disabled = false;
+    }
+  });
+}
+
 function irA(vista) {
   estado.vista = vista;
   guardarPreferencia('vista', vista);
   for (const b of $pestanas.querySelectorAll('button')) b.classList.toggle('activa', b.dataset.vista === vista);
-  ({ programar: vistaProgramar, cursos: vistaCursos, accesos: vistaAccesos, ajustes: vistaAjustes })[vista]();
+  ({ programar: vistaProgramar, cursos: vistaCursos, ajustes: vistaAjustes })[vista]();
 }
 
 async function cargarCursos() {
@@ -170,7 +207,7 @@ async function cargarCursos() {
   estado.cursos = await api(ruta);
 }
 
-// ---------- Vista colaborador ----------
+// ---------- Vista diseñador ----------
 
 async function vistaCursos() {
   $app.innerHTML = '<p class="cargando">Cargando cursos…</p>';
@@ -339,7 +376,7 @@ function pintarProgramar() {
     <section class="encabezado">
       <div>
         <h1>Programar cursos</h1>
-        <p class="sutil">Lo que registres aquí aparece de inmediato en la vista del colaborador.</p>
+        <p class="sutil">Lo que registres aquí aparece de inmediato en la vista del diseñador.</p>
       </div>
     </section>
 
@@ -453,91 +490,6 @@ function pintarProgramar() {
   }
 }
 
-// ---------- Vista administrador: accesos ----------
-
-async function vistaAccesos() {
-  $app.innerHTML = '<p class="cargando">Cargando accesos…</p>';
-  let datos;
-  try {
-    datos = await api('usuarios');
-  } catch (e) {
-    $app.innerHTML = `<section class="vacio"><p>${esc(e.message)}</p></section>`;
-    return;
-  }
-
-  $app.innerHTML = `
-    <section class="encabezado">
-      <div>
-        <h1>Accesos</h1>
-        <p class="sutil">Solo los correos de esta lista pueden usar la app. Cuando alguien cambie de cargo, agrega el correo de quien llega y quita el de quien se va.</p>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>Agregar o cambiar persona</h2>
-      <form id="form-usuario" class="form-curso">
-        <label class="crece">Correo
-          <input name="email" type="email" required placeholder="nombre@uninorte.edu.co">
-        </label>
-        <label class="crece">Nombre
-          <input name="nombre" maxlength="120" placeholder="Opcional">
-        </label>
-        <label>Rol
-          <select name="rol">
-            <option value="colaborador">Colaborador</option>
-            <option value="admin">Administrador</option>
-          </select>
-        </label>
-        <div class="botones"><button type="submit" class="primario">Guardar</button></div>
-      </form>
-      <p class="sutil pequeno">Si el correo ya existe, se actualizan su nombre y su rol.</p>
-    </section>
-
-    <section class="panel">
-      <h2>Personas con acceso</h2>
-      <div class="tabla-envoltura"><table>
-        <thead><tr><th>Correo</th><th>Nombre</th><th>Rol</th><th></th></tr></thead>
-        <tbody>
-          ${datos.admin_inicial.map((email) => `
-            <tr><td>${esc(email)}</td><td class="sutil">—</td><td><span class="pastilla ok">Administrador</span></td>
-            <td class="derecha sutil pequeno">Fijo en la configuración</td></tr>`).join('')}
-          ${datos.usuarios.filter((u) => !datos.admin_inicial.includes(u.email)).map((u) => `
-            <tr data-email="${esc(u.email)}">
-              <td>${esc(u.email)}</td>
-              <td>${esc(u.nombre) || '<span class="sutil">—</span>'}</td>
-              <td><span class="pastilla ${u.rol === 'admin' ? 'ok' : ''}">${u.rol === 'admin' ? 'Administrador' : 'Colaborador'}</span></td>
-              <td class="derecha">${u.email === estado.yo.email ? '<span class="sutil pequeno">Tú</span>' : '<button type="button" class="enlace peligro" data-quitar>Quitar acceso</button>'}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table></div>
-    </section>`;
-
-  const form = document.getElementById('form-usuario');
-  form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    try {
-      await api('usuarios', { method: 'POST', body: Object.fromEntries(new FormData(form)) });
-      avisar('Acceso guardado');
-      vistaAccesos();
-    } catch (e) {
-      avisar(e.message, 'error');
-    }
-  });
-  for (const boton of $app.querySelectorAll('[data-quitar]')) {
-    boton.addEventListener('click', async () => {
-      const email = boton.closest('tr').dataset.email;
-      if (!confirm(`¿Quitarle el acceso a ${email}?`)) return;
-      try {
-        await api(`usuarios/${encodeURIComponent(email)}`, { method: 'DELETE' });
-        avisar('Acceso quitado');
-        vistaAccesos();
-      } catch (e) {
-        avisar(e.message, 'error');
-      }
-    });
-  }
-}
-
 // ---------- Vista administrador: ajustes ----------
 
 async function vistaAjustes() {
@@ -572,7 +524,39 @@ async function vistaAjustes() {
           <button type="button" class="secundario" id="restaurar">Volver a la original</button>
         </div>
       </form>
+    </section>
+
+    <section class="panel">
+      <h2>Contraseñas</h2>
+      <p class="sutil">Cámbialas cuando llegue una persona nueva al cargo. Al cambiar una contraseña, quien tenía la anterior debe volver a ingresar.</p>
+      <form id="form-clave" class="form-curso">
+        <label>Contraseña de
+          <select name="rol">
+            <option value="disenador">Diseñador</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </label>
+        <label class="crece">Nueva contraseña
+          <input name="clave" type="text" minlength="6" required autocomplete="off">
+        </label>
+        <div class="botones"><button type="submit" class="primario">Cambiar contraseña</button></div>
+      </form>
     </section>`;
+
+  const formClave = document.getElementById('form-clave');
+  formClave.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const datos = Object.fromEntries(new FormData(formClave));
+    const quien = datos.rol === 'admin' ? 'administrador' : 'diseñador';
+    if (!confirm(`¿Cambiar la contraseña de ${quien}?`)) return;
+    try {
+      await api('ajustes/claves', { method: 'PUT', body: datos });
+      formClave.reset();
+      avisar(`Contraseña de ${quien} cambiada`);
+    } catch (e) {
+      avisar(e.message, 'error');
+    }
+  });
 
   const form = document.getElementById('form-prompt');
   form.addEventListener('submit', async (ev) => {

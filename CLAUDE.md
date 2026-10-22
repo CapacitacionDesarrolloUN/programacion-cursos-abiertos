@@ -4,9 +4,8 @@ App de Capacitación y Desarrollo (Uninorte) para programar cursos abiertos. La 
 
 - Todo el código, los textos y los comentarios van en español.
 - Stack: Cloudflare Workers con assets estáticos, D1 y R2. La interfaz en `public/` es JS vanilla sin build. No agregues frameworks, bundlers ni dependencias de runtime sin una razón fuerte.
-- `src/index.js` tiene la API y las rutas, `src/auth.js` verifica el JWT de Cloudflare Access, `src/db.js` tiene el esquema (se crea con `CREATE TABLE IF NOT EXISTS`; si cambias columnas, agrega un `ALTER TABLE` idempotente ahí mismo) y `src/imagen.js` la llamada a Gemini.
-- Roles: `admin` y `colaborador`, guardados en la tabla `usuarios`. `ADMIN_INICIAL` (variable del panel) siempre es admin.
-- `DEV_EMAIL` en `.dev.vars` simula la sesión, y solo en localhost. El encabezado `X-Dev-Email` permite probar otros roles en local.
-- Prueba local: `npm run dev`. Sin `GEMINI_API_KEY`, la app devuelve una imagen gris de prueba.
+- `src/index.js` tiene la API y las rutas, `src/sesion.js` maneja el ingreso por contraseña (PBKDF2 en la tabla `ajustes`, cookie firmada con HMAC y versión por rol para invalidar sesiones al cambiar la clave, límite de intentos por IP), `src/db.js` tiene el esquema (se crea con `CREATE TABLE IF NOT EXISTS`; si cambias columnas, agrega un `ALTER TABLE` idempotente ahí mismo) y `src/imagen.js` la llamada a Gemini.
+- Roles: `admin` y `disenador`, sin cuentas individuales: cada rol tiene una contraseña. Las iniciales salen de los secretos `CLAVE_ADMIN` y `CLAVE_DISENADOR` solo si no hay una guardada. Nunca pongas contraseñas en el repo, porque es público.
+- Prueba local: `cp .dev.vars.example .dev.vars && npm run dev`. Con `IMAGEN_DE_PRUEBA=1` y sin `GEMINI_API_KEY`, la app devuelve una imagen gris de prueba.
 - Despliegue: push a `main` y Workers Builds lo publica.
 - Si cambias un flujo, actualiza `docs/` (INSTALACION, TRASPASO, MANTENIMIENTO).

@@ -123,6 +123,15 @@ button:disabled { opacity: .6; cursor: progress; }
 .enlace.peligro { color: var(--peligro); }
 .enlace:hover { text-decoration: underline; }
 
+/* Ingreso */
+.ingreso {
+  max-width: 380px; margin: 8vh auto 0; background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: var(--radio); box-shadow: var(--sombra); padding: 28px;
+}
+.ingreso form { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+.ingreso p.peligro:empty { display: none; }
+.ingreso p.peligro { margin: 0; }
+
 /* Paneles del administrador */
 .panel {
   background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
@@ -153,7 +162,7 @@ td.link { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-spa
 .cifra { font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cifra.pequena { font-size: 1rem; padding-top: 8px; }
 
-/* Tarjetas del colaborador */
+/* Tarjetas del diseñador */
 .tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
 .tarjeta {
   background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);

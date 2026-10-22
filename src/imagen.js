@@ -13,7 +13,7 @@ export function armarPrompt(plantilla, titulo, ajuste) {
 // Devuelve { bytes: Uint8Array, tipo: 'image/png' }.
 export async function generarImagen(env, prompt, formato) {
   if (!env.GEMINI_API_KEY) {
-    if (env.DEV_EMAIL) return imagenDePrueba();
+    if (env.IMAGEN_DE_PRUEBA === '1') return imagenDePrueba();
     throw new Error('Falta la llave de Google Gemini (GEMINI_API_KEY). Ver docs/INSTALACION.md.');
   }
 

@@ -1,10 +1,9 @@
 // API de la app. Todo lo que no empieza por /api/ lo sirve Cloudflare desde public/.
 
-import { identificar, esAdminInicial } from './auth.js';
 import { prepararBase, PROMPT_POR_DEFECTO } from './db.js';
+import { rolDeSesion, ingresar, cookieSalida, cambiarClave, rolDeClave, ROLES } from './sesion.js';
 import { armarPrompt, generarImagen, FORMATOS } from './imagen.js';
 
-const ROLES = ['admin', 'colaborador'];
 const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 class ErrorHttp extends Error {
@@ -65,12 +64,6 @@ async function buscarCurso(env, id) {
   return fila;
 }
 
-async function cargarUsuario(env, email) {
-  const fila = await env.DB.prepare('SELECT * FROM usuarios WHERE email = ?').bind(email).first();
-  if (esAdminInicial(email, env)) return { email, nombre: fila?.nombre || '', rol: 'admin' };
-  return fila ? { email, nombre: fila.nombre, rol: fila.rol } : null;
-}
-
 function nombreArchivo(nombre, tipo) {
   const base = nombre
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -87,7 +80,7 @@ async function rutas(request, env, usuario, partes) {
   const [recurso, id, sub] = partes;
 
   if (recurso === 'yo' && metodo === 'GET') {
-    return json({ email: usuario.email, nombre: usuario.nombre, rol: usuario.rol });
+    return json({ rol: usuario.rol });
   }
 
   if (recurso === 'cursos') {
@@ -106,7 +99,7 @@ async function rutas(request, env, usuario, partes) {
       const curso = validarCurso(await leerJson(request));
       const fila = await env.DB
         .prepare('INSERT INTO cursos (nombre, fecha, link, creado_por) VALUES (?, ?, ?, ?) RETURNING *')
-        .bind(curso.nombre, curso.fecha, curso.link, usuario.email)
+        .bind(curso.nombre, curso.fecha, curso.link, usuario.rol)
         .first();
       return json(cursoPublico(fila), 201);
     }
@@ -119,7 +112,7 @@ async function rutas(request, env, usuario, partes) {
       const cursos = filas.map(validarCurso);
       await env.DB.batch(cursos.map((c) => env.DB
         .prepare('INSERT INTO cursos (nombre, fecha, link, creado_por) VALUES (?, ?, ?, ?)')
-        .bind(c.nombre, c.fecha, c.link, usuario.email)));
+        .bind(c.nombre, c.fecha, c.link, usuario.rol)));
       return json({ importados: cursos.length }, 201);
     }
 
@@ -179,43 +172,30 @@ async function rutas(request, env, usuario, partes) {
         .prepare(`UPDATE cursos SET imagen_key = ?, imagen_tipo = ?, imagen_en = datetime('now') WHERE id = ? RETURNING *`)
         .bind(clave, imagen.tipo, cursoId)
         .first();
-      await env.DB.prepare('INSERT INTO generaciones (curso_id, email) VALUES (?, ?)').bind(cursoId, usuario.email).run();
+      await env.DB.prepare('INSERT INTO generaciones (curso_id, rol) VALUES (?, ?)').bind(cursoId, usuario.rol).run();
       return json(cursoPublico(actualizado));
-    }
-  }
-
-  if (recurso === 'usuarios') {
-    soloAdmin(usuario);
-    if (!id && metodo === 'GET') {
-      const { results } = await env.DB.prepare('SELECT email, nombre, rol, creado_en FROM usuarios ORDER BY rol, email').all();
-      const iniciales = (env.ADMIN_INICIAL || '').split(',').map((c) => c.trim().toLowerCase()).filter(Boolean);
-      return json({ usuarios: results, admin_inicial: iniciales });
-    }
-    if (!id && metodo === 'POST') {
-      const datos = await leerJson(request);
-      const email = String(datos.email || '').trim().toLowerCase();
-      const nombre = String(datos.nombre || '').trim();
-      const rol = String(datos.rol || '');
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ErrorHttp(400, 'Ese correo no es válido.');
-      if (!ROLES.includes(rol)) throw new ErrorHttp(400, 'El rol debe ser admin o colaborador.');
-      await env.DB
-        .prepare(`INSERT INTO usuarios (email, nombre, rol) VALUES (?, ?, ?)
-                  ON CONFLICT(email) DO UPDATE SET nombre = excluded.nombre, rol = excluded.rol`)
-        .bind(email, nombre, rol)
-        .run();
-      return json({ ok: true }, 201);
-    }
-    if (id && metodo === 'DELETE') {
-      const email = decodeURIComponent(id).toLowerCase();
-      if (email === usuario.email) throw new ErrorHttp(400, 'No puedes quitarte tu propio acceso.');
-      await env.DB.prepare('DELETE FROM usuarios WHERE email = ?').bind(email).run();
-      return json({ ok: true });
     }
   }
 
   if (recurso === 'ajustes') {
     soloAdmin(usuario);
-    if (metodo === 'GET') {
+    if (id === 'claves' && metodo === 'PUT') {
+      const { rol, clave } = await leerJson(request);
+      const nueva = String(clave || '');
+      if (!ROLES.includes(rol)) throw new ErrorHttp(400, 'Rol no válido.');
+      if (nueva.length < 6) throw new ErrorHttp(400, 'La contraseña debe tener al menos 6 caracteres.');
+      const duena = (await rolDeClave(env.DB, nueva)).rol;
+      if (duena && duena !== rol) throw new ErrorHttp(400, 'Esa contraseña ya la usa el otro rol. Elige una distinta.');
+      await cambiarClave(env.DB, rol, nueva);
+      // Cambiar la propia contraseña cierra la sesión actual; se renueva para no sacar al admin.
+      const respuesta = json({ ok: true });
+      if (rol === 'admin') {
+        const { cookie } = await ingresar(request, env.DB, nueva);
+        if (cookie) respuesta.headers.append('Set-Cookie', cookie);
+      }
+      return respuesta;
+    }
+    if (!id && metodo === 'GET') {
       const fila = await env.DB.prepare(`SELECT valor FROM ajustes WHERE clave = 'prompt'`).first();
       const mes = await env.DB
         .prepare(`SELECT COUNT(*) AS total FROM generaciones WHERE creado_en >= date('now', 'start of month')`)
@@ -229,7 +209,7 @@ async function rutas(request, env, usuario, partes) {
         formatos: FORMATOS,
       });
     }
-    if (metodo === 'PUT') {
+    if (!id && metodo === 'PUT') {
       const { prompt } = await leerJson(request);
       const texto = String(prompt || '').trim();
       if (texto.length < 20) throw new ErrorHttp(400, 'El prompt es muy corto.');
@@ -251,18 +231,25 @@ export default {
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
 
     try {
-      const sesion = await identificar(request, env);
-      if (sesion.error) return json({ error: sesion.error }, sesion.estado);
+      await prepararBase(env.DB, env);
 
-      await prepararBase(env.DB);
-      const usuario = await cargarUsuario(env, sesion.email);
-      if (!usuario) {
-        return json({
-          error: `El correo ${sesion.email} no tiene acceso. Pídele a un administrador de la app que lo agregue.`,
-          sin_acceso: true,
-          email: sesion.email,
-        }, 403);
+      if (url.pathname === '/api/ingresar' && request.method === 'POST') {
+        const { clave } = await leerJson(request);
+        const resultado = await ingresar(request, env.DB, clave);
+        if (resultado.error) return json({ error: resultado.error }, resultado.estado);
+        const respuesta = json({ rol: resultado.rol });
+        respuesta.headers.append('Set-Cookie', resultado.cookie);
+        return respuesta;
       }
+      if (url.pathname === '/api/salir' && request.method === 'POST') {
+        const respuesta = json({ ok: true });
+        respuesta.headers.append('Set-Cookie', cookieSalida(request));
+        return respuesta;
+      }
+
+      const rol = await rolDeSesion(request, env.DB);
+      if (!rol) return json({ error: 'Ingresa la contraseña para continuar.', sin_sesion: true }, 401);
+      const usuario = { rol };
 
       const partes = url.pathname.replace(/^\/api\/+/, '').split('/').filter(Boolean);
       return await rutas(request, env, usuario, partes);
