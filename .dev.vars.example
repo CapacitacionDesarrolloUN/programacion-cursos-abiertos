@@ -1,0 +1,6 @@
+# Copia este archivo como .dev.vars para probar la app en tu computador (npm run dev).
+# DEV_EMAIL simula el inicio de sesión. Solo funciona en localhost.
+DEV_EMAIL=tu-correo@uninorte.edu.co
+ADMIN_INICIAL=tu-correo@uninorte.edu.co
+# Opcional: sin llave, la app genera una imagen gris de prueba.
+# GEMINI_API_KEY=

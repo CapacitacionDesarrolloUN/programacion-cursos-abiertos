@@ -1,0 +1,15 @@
+{
+  "name": "programacion-cursos-abiertos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Programación de cursos abiertos de Capacitación y Desarrollo (Uninorte): registro de cursos e imágenes IA por curso.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "node --check src/index.js && node --check public/app.js"
+  },
+  "devDependencies": {
+    "wrangler": "4.152.0"
+  }
+}
