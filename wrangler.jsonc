@@ -13,11 +13,8 @@
     "run_worker_first": ["/api/*"]
   },
 
-  // Base de datos (cursos, ajustes, contraseñas cifradas). Cloudflare la crea sola en el primer despliegue.
+  // Base de datos (tareas, imágenes, ajustes y contraseñas cifradas). Cloudflare la crea sola en el primer despliegue.
   "d1_databases": [{ "binding": "DB", "database_name": "programacion-cursos" }],
-
-  // Almacenamiento de las imágenes generadas. También se crea solo en el primer despliegue.
-  "r2_buckets": [{ "binding": "IMAGENES", "bucket_name": "programacion-cursos-imagenes" }],
 
   // Los secretos GEMINI_API_KEY, CLAVE_ADMIN y CLAVE_DISENADOR se configuran en el panel
   // de Cloudflare (Worker > Settings > Variables and Secrets), nunca aquí: el repo es público.
@@ -25,9 +22,9 @@
   "keep_vars": true,
   "vars": {
     // Modelo de Google Gemini que genera las imágenes. Cámbialo si Google lo retira.
-    "GEMINI_MODEL": "gemini-2.5-flash-image",
+    "GEMINI_MODEL": "gemini-3.1-flash-lite-image",
     // Costo aproximado por imagen en dólares, solo para el contador de uso.
-    "COSTO_IMAGEN_USD": "0.039",
+    "COSTO_IMAGEN_USD": "0.045",
     // Página que abre el botón "Generar link de Zoom" para crear la reunión.
     "ZOOM_URL": "https://zoom.us/meeting#/upcoming"
   },

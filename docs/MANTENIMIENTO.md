@@ -16,6 +16,10 @@ Un administrador puede ajustar la instrucción en **Ajustes → Instrucción par
 
 En GitHub, edita `wrangler.jsonc` y cambia `ZOOM_URL`. Por ejemplo, puedes usar la página de programar reuniones de la cuenta institucional de Zoom.
 
+## Espacio de la base de datos
+
+Cada imagen ocupa cerca de 1 MB en D1, y el plan gratuito incluye 5 GB: alcanza para miles de imágenes. Si algún día se llena, borra tareas viejas desde la app (se borran con su imagen).
+
 ## Revisar el gasto
 
 - En la app: **Ajustes** muestra cuántas imágenes se generaron en el mes y su costo aproximado.
@@ -43,6 +47,6 @@ Crea una llave nueva en <https://aistudio.google.com/apikey>. Después, en Cloud
 
 En Cloudflare → Worker → **Observability** están los registros de cada petición, incluidos los errores.
 
-## Copia de seguridad de los cursos
+## Copia de seguridad de las tareas
 
 En Cloudflare → **D1 → programacion-cursos → Console**, ejecuta `SELECT * FROM cursos ORDER BY fecha;` y exporta el resultado. D1 también guarda puntos de restauración de los últimos 30 días (**Time Travel**).

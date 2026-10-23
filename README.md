@@ -18,10 +18,10 @@ Tiene dos caras, y se entra a cada una con su propia contraseña:
 ## Cómo está hecha
 
 - **Cloudflare Workers** sirve la página y la API (`src/`), con plan gratuito.
-- **Cloudflare D1** es la base de datos (tareas, ajustes y contraseñas cifradas). Las tablas y columnas nuevas se crean solas.
-- **Cloudflare R2** guarda las imágenes generadas.
+- **Cloudflare D1** es la base de datos (tareas, imágenes, ajustes y contraseñas cifradas). Las tablas y columnas nuevas se crean solas. No se usa R2, para que la cuenta de Cloudflare no pida tarjeta.
+- Las imágenes se comprimen a JPEG en el navegador antes de guardarse (máximo 1600 px y unos 1,3 MB), porque D1 acepta hasta 2 MB por registro.
 - **Ingreso con contraseña:** hay una para el administrador y otra para el diseñador. Se guardan cifradas, se pueden cambiar desde **Ajustes** y la app bloquea la entrada por 15 minutos después de 8 intentos fallidos.
-- **Google Gemini** ("Nano Banana") genera las imágenes, a unos US$0,039 por imagen.
+- **Google Gemini** ("Nano Banana", modelo `gemini-3.1-flash-lite-image`) genera las imágenes, a unos US$0,04 a US$0,07 por imagen.
 - La interfaz (`public/`) es HTML, CSS y JavaScript sin frameworks ni compilación, para que no se desactualice con los años.
 
 Cada cambio que llega a la rama `main` en GitHub se publica solo en Cloudflare.

@@ -10,14 +10,14 @@ export function armarPrompt(plantilla, titulo, ajuste) {
   return prompt;
 }
 
-// Devuelve { bytes: Uint8Array, tipo: 'image/png' }.
+// Devuelve { base64, tipo }. El navegador la comprime antes de guardarla (ver public/app.js).
 export async function generarImagen(env, prompt, formato) {
   if (!env.GEMINI_API_KEY) {
     if (env.IMAGEN_DE_PRUEBA === '1') return imagenDePrueba();
     throw new Error('Falta la llave de Google Gemini (GEMINI_API_KEY). Ver docs/INSTALACION.md.');
   }
 
-  const modelo = env.GEMINI_MODEL || 'gemini-2.5-flash-image';
+  const modelo = env.GEMINI_MODEL || 'gemini-3.1-flash-lite-image';
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent`,
     {
@@ -46,14 +46,11 @@ export async function generarImagen(env, prompt, formato) {
     throw new Error(`Gemini no devolvió imagen (${motivo}). Intenta de nuevo o cambia el ajuste.`);
   }
   const inline = imagen.inlineData || imagen.inline_data;
-  return {
-    bytes: Uint8Array.from(Buffer.from(inline.data, 'base64')),
-    tipo: inline.mimeType || inline.mime_type || 'image/png',
-  };
+  return { base64: inline.data, tipo: inline.mimeType || inline.mime_type || 'image/png' };
 }
 
 // Imagen gris de 1x1 para probar en el computador sin gastar créditos.
 function imagenDePrueba() {
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNoaGgAAAMEAYFL09IQAAAAAElFTkSuQmCC';
-  return { bytes: Uint8Array.from(Buffer.from(png, 'base64')), tipo: 'image/png' };
+  return { base64: png, tipo: 'image/png' };
 }

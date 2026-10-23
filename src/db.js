@@ -27,6 +27,13 @@ const ESQUEMA = [
     clave TEXT PRIMARY KEY,
     valor TEXT NOT NULL
   )`,
+  // Imágenes ya comprimidas a JPEG por el navegador, en base64 (una por tarea).
+  `CREATE TABLE IF NOT EXISTS imagenes (
+    curso_id INTEGER PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    datos TEXT NOT NULL,
+    creado_en TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
   `CREATE TABLE IF NOT EXISTS generaciones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     curso_id INTEGER,

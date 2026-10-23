@@ -175,21 +175,21 @@ async function rutas(request, env, usuario, partes) {
     if (!sub && metodo === 'DELETE') {
       soloAdmin(usuario);
       const fila = await buscarCurso(env, cursoId);
-      if (fila.imagen_key) await env.IMAGENES.delete(fila.imagen_key);
-      await env.DB.prepare('DELETE FROM cursos WHERE id = ?').bind(cursoId).run();
+      await env.DB.batch([
+        env.DB.prepare('DELETE FROM imagenes WHERE curso_id = ?').bind(cursoId),
+        env.DB.prepare('DELETE FROM cursos WHERE id = ?').bind(cursoId),
+      ]);
       return json({ ok: true });
     }
 
     if (sub === 'imagen' && metodo === 'GET') {
       const fila = await buscarCurso(env, cursoId);
-      if (!fila.imagen_key) throw new ErrorHttp(404, 'Esta tarea todavía no tiene imagen.');
-      const objeto = await env.IMAGENES.get(fila.imagen_key);
-      if (!objeto) throw new ErrorHttp(404, 'No se encontró la imagen. Genérala de nuevo.');
+      const imagen = await env.DB.prepare('SELECT tipo, datos FROM imagenes WHERE curso_id = ?').bind(cursoId).first();
+      if (!imagen) throw new ErrorHttp(404, 'Esta tarea todavía no tiene imagen.');
       const descargar = new URL(request.url).searchParams.has('descargar');
-      const tipo = fila.imagen_tipo || 'image/png';
-      const encabezados = { 'Content-Type': tipo, 'Cache-Control': 'private, max-age=31536000, immutable' };
-      if (descargar) encabezados['Content-Disposition'] = `attachment; filename="${nombreArchivo(fila.nombre, tipo)}"`;
-      return new Response(objeto.body, { headers: encabezados });
+      const encabezados = { 'Content-Type': imagen.tipo, 'Cache-Control': 'private, max-age=31536000, immutable' };
+      if (descargar) encabezados['Content-Disposition'] = `attachment; filename="${nombreArchivo(fila.nombre, imagen.tipo)}"`;
+      return new Response(Buffer.from(imagen.datos, 'base64'), { headers: encabezados });
     }
 
     if (sub === 'imagen' && metodo === 'POST') {
@@ -206,15 +206,26 @@ async function rutas(request, env, usuario, partes) {
         throw new ErrorHttp(502, e.message);
       }
 
-      const clave = `cursos/${cursoId}/${Date.now()}`;
-      await env.IMAGENES.put(clave, imagen.bytes, { httpMetadata: { contentType: imagen.tipo } });
-      if (fila.imagen_key) await env.IMAGENES.delete(fila.imagen_key);
-      const actualizado = await env.DB
-        .prepare(`UPDATE cursos SET imagen_key = ?, imagen_tipo = ?, imagen_en = datetime('now') WHERE id = ? RETURNING *`)
-        .bind(clave, imagen.tipo, cursoId)
-        .first();
+      // Se devuelve sin guardar: el navegador la comprime y la sube con PUT.
       await env.DB.prepare('INSERT INTO generaciones (curso_id, rol) VALUES (?, ?)').bind(cursoId, usuario.rol).run();
-      return json(cursoPublico(actualizado));
+      return json(imagen);
+    }
+
+    if (sub === 'imagen' && metodo === 'PUT') {
+      await buscarCurso(env, cursoId);
+      const { base64, tipo } = await leerJson(request);
+      const datos = String(base64 || '');
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(tipo)) throw new ErrorHttp(400, 'Formato de imagen no válido.');
+      if (!datos || !/^[A-Za-z0-9+/=]+$/.test(datos)) throw new ErrorHttp(400, 'La imagen llegó dañada. Genérala de nuevo.');
+      if (datos.length > 1_800_000) throw new ErrorHttp(413, 'La imagen es demasiado grande para guardarla.');
+      const [, actualizado] = await env.DB.batch([
+        env.DB.prepare(`INSERT INTO imagenes (curso_id, tipo, datos) VALUES (?, ?, ?)
+                        ON CONFLICT(curso_id) DO UPDATE SET tipo = excluded.tipo, datos = excluded.datos,
+                        creado_en = datetime('now')`).bind(cursoId, tipo, datos),
+        env.DB.prepare(`UPDATE cursos SET imagen_key = 'd1', imagen_tipo = ?, imagen_en = datetime('now')
+                        WHERE id = ? RETURNING *`).bind(tipo, cursoId),
+      ]);
+      return json(cursoPublico(actualizado.results[0]));
     }
   }
 
@@ -246,7 +257,7 @@ async function rutas(request, env, usuario, partes) {
         prompt_por_defecto: PROMPT_POR_DEFECTO,
         imagenes_mes: mes?.total || 0,
         costo_imagen_usd: Number(env.COSTO_IMAGEN_USD || 0.039),
-        modelo: env.GEMINI_MODEL || 'gemini-2.5-flash-image',
+        modelo: env.GEMINI_MODEL || 'gemini-3.1-flash-lite-image',
         formatos: FORMATOS,
       });
     }

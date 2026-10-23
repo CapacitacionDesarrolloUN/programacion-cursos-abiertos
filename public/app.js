@@ -110,6 +110,23 @@ function urlImagen(curso, descargar = false) {
   return `/api/cursos/${curso.id}/imagen?v=${v}${descargar ? '&descargar=1' : ''}`;
 }
 
+// Pasa la imagen de la IA a JPEG de buena calidad para que quepa en la base de datos (máx. ~1,3 MB).
+async function comprimirImagen(base64, tipo) {
+  const img = new Image();
+  img.src = `data:${tipo};base64,${base64}`;
+  await img.decode();
+  const escala = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+  const lienzo = document.createElement('canvas');
+  lienzo.width = Math.round(img.naturalWidth * escala);
+  lienzo.height = Math.round(img.naturalHeight * escala);
+  lienzo.getContext('2d').drawImage(img, 0, 0, lienzo.width, lienzo.height);
+  for (const calidad of [0.92, 0.85, 0.75, 0.6]) {
+    const datos = lienzo.toDataURL('image/jpeg', calidad).split(',')[1];
+    if (datos.length < 1_700_000) return { base64: datos, tipo: 'image/jpeg' };
+  }
+  throw new Error('No se pudo comprimir la imagen. Intenta de nuevo.');
+}
+
 // Convierte fechas de Excel (dd/mm/aaaa, aaaa-mm-dd o número de serie) a aaaa-mm-dd.
 function normalizarFecha(valor) {
   const t = String(valor || '').trim();
@@ -412,7 +429,9 @@ $app.addEventListener('click', async (ev) => {
     estado.generando.add(curso.id);
     pintarCursos();
     try {
-      const actualizado = await api(`cursos/${curso.id}/imagen`, { method: 'POST', body: { formato, ajuste } });
+      const generada = await api(`cursos/${curso.id}/imagen`, { method: 'POST', body: { formato, ajuste } });
+      const comprimida = await comprimirImagen(generada.base64, generada.tipo);
+      const actualizado = await api(`cursos/${curso.id}/imagen`, { method: 'PUT', body: comprimida });
       Object.assign(curso, actualizado);
       avisar('Imagen lista');
     } catch (e) {
