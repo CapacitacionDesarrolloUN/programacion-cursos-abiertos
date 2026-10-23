@@ -10,6 +10,7 @@ const estado = {
   vista: null,
   cursos: [],
   verListas: false,
+  avisos: 0,
   busqueda: '',
   generando: new Set(),
 };
@@ -74,6 +75,12 @@ function fechaLarga(iso) {
 function fechaCorta(iso) {
   const [a, m, d] = iso.split('-').map(Number);
   return new Date(a, m - 1, d).toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Convierte "aaaa-mm-dd hh:mm:ss" (UTC, como lo guarda la base) a fecha y hora local.
+function fechaHora(utc) {
+  const d = new Date(`${utc.replace(' ', 'T')}Z`);
+  return d.toLocaleString('es-CO', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
 let temporizadorAviso;
@@ -159,6 +166,33 @@ async function iniciar() {
   }
   const guardada = leerPreferencias().vista;
   irA(vistas.some(([id]) => id === guardada) ? guardada : vistas[0][0]);
+  if (estado.yo.rol === 'admin') {
+    revisarAvisos();
+    setInterval(revisarAvisos, 60000);
+  }
+}
+
+// Revisa si el diseñador terminó tareas que el administrador no ha visto.
+async function revisarAvisos() {
+  let cursos;
+  try {
+    cursos = await api('cursos?estado=lista');
+  } catch {
+    return;
+  }
+  const nuevas = cursos.filter((c) => c.aviso_nuevo);
+  if (nuevas.length > estado.avisos) {
+    const ultima = nuevas[nuevas.length - 1];
+    avisar(nuevas.length === 1 ? `El diseñador terminó «${ultima.nombre}»` : `El diseñador terminó ${nuevas.length} tareas`);
+    if (estado.vista === 'programar' && !document.querySelector('dialog[open]')) vistaProgramar();
+  }
+  estado.avisos = nuevas.length;
+  const pestana = $pestanas.querySelector('[data-vista="programar"]');
+  if (pestana) {
+    pestana.querySelector('.contador')?.remove();
+    if (nuevas.length) pestana.insertAdjacentHTML('beforeend', ` <span class="contador" title="Tareas terminadas sin revisar">${nuevas.length}</span>`);
+  }
+  document.title = nuevas.length ? `(${nuevas.length}) Cursos abiertos` : 'Cursos abiertos';
 }
 
 function pantallaIngreso() {
@@ -240,19 +274,19 @@ function pintarCursos() {
   const filtro = estado.busqueda.trim().toLowerCase();
   const cursos = estado.cursos.filter((c) => !filtro || c.nombre.toLowerCase().includes(filtro));
   const vacio = filtro ? 'Ninguna tarea coincide con la búsqueda.'
-    : estado.verListas ? 'Todavía no hay tareas listas.' : 'No tienes tareas pendientes. 🎉';
+    : estado.verListas ? 'Todavía no hay tareas realizadas.' : 'No tienes tareas pendientes. 🎉';
 
   $app.innerHTML = `
     <section class="encabezado">
       <div>
-        <h1>${estado.verListas ? 'Tareas listas' : 'Tareas pendientes'}</h1>
-        <p class="sutil">${estado.verListas ? 'Tareas que ya marcaste como listas.' : 'Copia la información de cada actividad, genera su imagen y márcala como lista.'}</p>
+        <h1>${estado.verListas ? 'Tareas realizadas' : 'Tareas pendientes'}</h1>
+        <p class="sutil">${estado.verListas ? 'Tareas que ya marcaste como listas. El administrador recibe un aviso de cada una.' : 'Copia la información de cada actividad, genera su imagen y márcala como lista.'}</p>
       </div>
       <div class="controles">
         <input type="search" id="buscar" placeholder="Buscar actividad" value="${esc(estado.busqueda)}">
         <div class="segmento" role="group">
           <button type="button" data-ver="pendientes" class="${estado.verListas ? '' : 'activa'}">Pendientes</button>
-          <button type="button" data-ver="listas" class="${estado.verListas ? 'activa' : ''}">Listas</button>
+          <button type="button" data-ver="listas" class="${estado.verListas ? 'activa' : ''}">Realizadas</button>
         </div>
       </div>
     </section>
@@ -364,7 +398,7 @@ $app.addEventListener('click', async (ev) => {
   if (accion === 'lista' || accion === 'reabrir') {
     try {
       await api(`cursos/${curso.id}/estado`, { method: 'PUT', body: { estado: accion === 'lista' ? 'lista' : 'pendiente' } });
-      avisar(accion === 'lista' ? 'Tarea marcada como lista' : 'Tarea devuelta a pendientes');
+      avisar(accion === 'lista' ? 'Tarea lista. Se le avisó al administrador.' : 'Tarea devuelta a pendientes');
       vistaCursos();
     } catch (e) {
       avisar(e.message, 'error');
@@ -405,9 +439,11 @@ async function vistaProgramar() {
 
 function pintarProgramar() {
   const pendientes = estado.cursos.filter((c) => c.estado !== 'lista');
-  const listas = estado.cursos.filter((c) => c.estado === 'lista').reverse();
+  const realizadas = estado.cursos.filter((c) => c.estado === 'lista')
+    .sort((x, y) => String(y.lista_en || '').localeCompare(String(x.lista_en || '')));
+  const nuevas = realizadas.filter((c) => c.aviso_nuevo);
 
-  const filas = (lista) => lista.map((c) => `
+  const filas = pendientes.map((c) => `
     <tr data-id="${c.id}">
       <td>${esc(c.nombre)}
         <div class="enlaces-fila">
@@ -417,16 +453,29 @@ function pintarProgramar() {
       </td>
       <td class="nowrap">${esc(fechaCorta(c.fecha))}</td>
       <td class="nowrap">${c.fecha_boletin ? esc(fechaCorta(c.fecha_boletin)) : '<span class="sutil">—</span>'}</td>
-      <td class="nowrap">${c.estado === 'lista' ? '<span class="pastilla ok">Lista</span>' : '<span class="pastilla">Pendiente</span>'}
-        ${c.tiene_imagen ? '<span class="pastilla">Con imagen</span>' : ''}</td>
+      <td class="nowrap"><span class="pastilla">${c.tiene_imagen ? 'Imagen generada' : 'Sin imagen'}</span></td>
       <td class="nowrap derecha">
         <button type="button" class="enlace" data-editar>Editar</button>
         <button type="button" class="enlace peligro" data-borrar>Eliminar</button>
       </td>
     </tr>`).join('');
-  const tabla = (lista) => `<div class="tabla-envoltura"><table>
-    <thead><tr><th>Actividad</th><th>Fecha</th><th>Boletín</th><th>Estado</th><th></th></tr></thead>
-    <tbody>${filas(lista)}</tbody></table></div>`;
+
+  const tarjetasRealizadas = realizadas.map((c) => `
+    <article class="realizada ${c.aviso_nuevo ? 'nueva' : ''}" data-id="${c.id}">
+      <div class="mini">
+        ${c.tiene_imagen ? `<img src="${urlImagen(c)}" alt="Imagen de ${esc(c.nombre)}" loading="lazy">` : '<span>Sin imagen</span>'}
+      </div>
+      <div class="realizada-cuerpo">
+        ${c.aviso_nuevo ? '<span class="pastilla nueva">Nueva</span>' : ''}
+        <strong>${esc(c.nombre)}</strong>
+        <span class="sutil pequeno">Terminada ${c.lista_en ? esc(fechaHora(c.lista_en)) : ''}</span>
+        <span class="sutil pequeno">Actividad: ${esc(fechaCorta(c.fecha))}${c.fecha_boletin ? ` · Boletín: ${esc(fechaCorta(c.fecha_boletin))}` : ''}</span>
+        <div class="realizada-acciones">
+          ${c.tiene_imagen ? `<a class="enlace" href="${urlImagen(c, true)}" download>Descargar imagen</a>` : ''}
+          <button type="button" class="enlace" data-reabrir>Devolver a pendientes</button>
+        </div>
+      </div>
+    </article>`).join('');
 
   $app.innerHTML = `
     <section class="encabezado">
@@ -440,24 +489,47 @@ function pintarProgramar() {
       </div>
     </section>
 
-    <section class="panel">
-      <h2>Pendientes (${pendientes.length})</h2>
-      ${pendientes.length ? tabla(pendientes) : '<p class="sutil">No hay tareas pendientes. Usa «Programar tarea» para crear una.</p>'}
+    ${nuevas.length ? `
+    <section class="banner-aviso" role="status">
+      <div>
+        <strong>${nuevas.length === 1 ? 'El diseñador terminó una tarea' : `El diseñador terminó ${nuevas.length} tareas`}</strong>
+        <span>${nuevas.map((c) => esc(c.nombre)).join(' · ')}</span>
+      </div>
+      <button type="button" class="secundario" id="entendido">Entendido</button>
+    </section>` : ''}
+
+    <section class="resumen-tareas">
+      <div><span class="cifra">${pendientes.length}</span><span class="sutil">pendientes</span></div>
+      <div class="ok"><span class="cifra">${realizadas.length}</span><span class="sutil">realizadas</span></div>
     </section>
 
-    ${listas.length ? `
     <section class="panel">
-      <details>
-        <summary><h2 class="en-linea">Listas (${listas.length})</h2></summary>
-        ${tabla(listas)}
-      </details>
-    </section>` : ''}
+      <h2>Pendientes del diseñador</h2>
+      ${pendientes.length ? `<div class="tabla-envoltura"><table>
+        <thead><tr><th>Actividad</th><th>Fecha</th><th>Boletín</th><th>Imagen</th><th></th></tr></thead>
+        <tbody>${filas}</tbody></table></div>` : '<p class="sutil">No hay tareas pendientes. Usa «Programar tarea» para crear una.</p>'}
+    </section>
+
+    <section class="panel panel-realizadas">
+      <h2>✓ Tareas realizadas</h2>
+      ${realizadas.length ? `<div class="realizadas">${tarjetasRealizadas}</div>` : '<p class="sutil">Cuando el diseñador marque una tarea como lista, aparecerá aquí con su imagen.</p>'}
+    </section>
 
     <dialog id="dialogo-tarea" class="dialogo"></dialog>
     <dialog id="dialogo-importar" class="dialogo"></dialog>`;
 
   document.getElementById('nueva-tarea').addEventListener('click', () => abrirTarea(null));
   document.getElementById('abrir-importar').addEventListener('click', abrirImportar);
+  document.getElementById('entendido')?.addEventListener('click', async () => {
+    try {
+      await api('cursos/avisos', { method: 'POST' });
+      estado.avisos = 0;
+      await vistaProgramar();
+      revisarAvisos();
+    } catch (e) {
+      avisar(e.message, 'error');
+    }
+  });
 
   for (const fila of $app.querySelectorAll('tr[data-id]')) {
     const id = Number(fila.dataset.id);
@@ -468,6 +540,17 @@ function pintarProgramar() {
       try {
         await api(`cursos/${id}`, { method: 'DELETE' });
         avisar('Tarea eliminada');
+        vistaProgramar();
+      } catch (e) {
+        avisar(e.message, 'error');
+      }
+    });
+  }
+  for (const tarjeta of $app.querySelectorAll('.realizada')) {
+    tarjeta.querySelector('[data-reabrir]').addEventListener('click', async () => {
+      try {
+        await api(`cursos/${tarjeta.dataset.id}/estado`, { method: 'PUT', body: { estado: 'pendiente' } });
+        avisar('Tarea devuelta a pendientes');
         vistaProgramar();
       } catch (e) {
         avisar(e.message, 'error');

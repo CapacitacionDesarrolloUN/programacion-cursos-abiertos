@@ -263,3 +263,37 @@ td.link { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-spa
   .fila-2 { grid-template-columns: 1fr; }
   .con-boton { flex-direction: column; }
 }
+
+/* Avisos y tareas realizadas */
+.contador {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px;
+  margin-left: 6px; border-radius: 99px; background: var(--ok-texto); color: var(--superficie); font-size: .75rem; font-weight: 700;
+}
+.banner-aviso {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  background: var(--ok-fondo); color: var(--ok-texto); border-radius: var(--radio); padding: 14px 18px; margin-bottom: 18px;
+}
+.banner-aviso div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.banner-aviso span { overflow-wrap: anywhere; }
+.resumen-tareas { display: flex; gap: 12px; margin-bottom: 18px; }
+.resumen-tareas > div {
+  display: flex; align-items: baseline; gap: 8px; background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: var(--radio); padding: 10px 16px;
+}
+.resumen-tareas .cifra { font-size: 1.4rem; }
+.resumen-tareas .ok .cifra { color: var(--ok-texto); }
+.panel-realizadas h2 { color: var(--ok-texto); }
+.realizadas { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.realizada {
+  display: flex; gap: 12px; padding: 10px; border: 1px solid var(--borde); border-radius: 10px; background: var(--superficie);
+}
+.realizada.nueva { border-color: var(--ok-texto); box-shadow: 0 0 0 1px var(--ok-texto) inset; }
+.mini {
+  flex: none; width: 84px; height: 84px; border-radius: 8px; overflow: hidden; background: var(--superficie-2);
+  display: flex; align-items: center; justify-content: center; font-size: .72rem; color: var(--texto-suave);
+}
+.mini img { width: 100%; height: 100%; object-fit: cover; }
+.realizada-cuerpo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.realizada-cuerpo strong { overflow-wrap: anywhere; }
+.realizada-acciones { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; margin-left: -6px; font-size: .85rem; }
+.pastilla.nueva { align-self: flex-start; background: var(--ok-texto); color: var(--superficie); font-weight: 700; }

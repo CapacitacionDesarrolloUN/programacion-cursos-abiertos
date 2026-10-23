@@ -67,6 +67,8 @@ function cursoPublico(fila) {
     link_zoom: fila.link_zoom || '',
     fecha_boletin: fila.fecha_boletin,
     estado: fila.estado || 'pendiente',
+    lista_en: fila.lista_en,
+    aviso_nuevo: fila.estado === 'lista' && fila.aviso_visto === 0,
     tiene_imagen: Boolean(fila.imagen_key),
     imagen_en: fila.imagen_en,
     actualizado_en: fila.actualizado_en,
@@ -134,6 +136,13 @@ async function rutas(request, env, usuario, partes) {
       return json({ importados: cursos.length }, 201);
     }
 
+    // El administrador confirma que ya vio los avisos de tareas terminadas.
+    if (id === 'avisos' && metodo === 'POST') {
+      soloAdmin(usuario);
+      await env.DB.prepare(`UPDATE cursos SET aviso_visto = 1 WHERE aviso_visto = 0`).run();
+      return json({ ok: true });
+    }
+
     const cursoId = Number(id);
     if (!Number.isInteger(cursoId)) throw new ErrorHttp(404, 'Ruta no encontrada.');
 
@@ -155,9 +164,10 @@ async function rutas(request, env, usuario, partes) {
       const { estado } = await leerJson(request);
       if (!ESTADOS.includes(estado)) throw new ErrorHttp(400, 'Estado no válido.');
       const fila = await env.DB
-        .prepare(`UPDATE cursos SET estado = ?, lista_en = CASE WHEN ? = 'lista' THEN datetime('now') END
+        .prepare(`UPDATE cursos SET estado = ?, lista_en = CASE WHEN ? = 'lista' THEN datetime('now') END,
+                  aviso_visto = CASE WHEN ? = 'lista' AND ? = 'disenador' THEN 0 ELSE 1 END
                   WHERE id = ? RETURNING *`)
-        .bind(estado, estado, cursoId)
+        .bind(estado, estado, estado, usuario.rol, cursoId)
         .first();
       return json(cursoPublico(fila));
     }

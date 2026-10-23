@@ -46,6 +46,8 @@ const COLUMNAS_NUEVAS = {
     fecha_boletin: 'TEXT',
     estado: "TEXT NOT NULL DEFAULT 'pendiente'",
     lista_en: 'TEXT',
+    // 0 = el administrador todavía no ha visto que la tarea quedó lista.
+    aviso_visto: 'INTEGER NOT NULL DEFAULT 1',
   },
 };
 
