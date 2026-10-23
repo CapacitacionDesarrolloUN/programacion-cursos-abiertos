@@ -815,7 +815,8 @@ function filaTarea(c, i) {
         </span>
       </div>
       <div class="fila-estado">
-        ${plazoBoletin(c)}
+        ${c.fecha_boletin ? plazoBoletin(c) : '<span class="plazo pronto"><i></i>Falta fecha de boletín</span>'}
+        ${c.desde_agenda ? '<span class="pastilla">Desde la agenda</span>' : ''}
         <span class="pastilla ${c.tiene_imagen ? 'ok' : ''}">${c.tiene_imagen ? 'Con imagen' : 'Sin imagen'}</span>
       </div>
       <div class="fila-acciones">

@@ -86,6 +86,7 @@ function cursoPublico(fila) {
     tiene_imagen: Boolean(fila.imagen_key),
     imagen_en: fila.imagen_en,
     actualizado_en: fila.actualizado_en,
+    desde_agenda: Boolean(fila.agenda_id),
   };
 }
 
@@ -120,6 +121,54 @@ function nombreArchivo(nombre, tipo) {
     .slice(0, 80) || 'curso';
   const ext = tipo === 'image/jpeg' ? 'jpg' : tipo === 'image/webp' ? 'webp' : 'png';
   return `${base}.${ext}`;
+}
+
+// ---------- Tareas que llegan desde la agenda ----------
+// La agenda (otra página, sin login) manda la tarea con el botón "Añadir a cursos abiertos".
+// No usa código de acceso: solo se aceptan peticiones del navegador desde la dirección de la
+// agenda (AGENDA_ORIGEN en wrangler.jsonc), igual de abierta que la agenda misma.
+
+function origenAgenda(request, env) {
+  const origen = request.headers.get('Origin') || '';
+  const permitidos = String(env.AGENDA_ORIGEN || '').split(',').map((o) => o.trim()).filter(Boolean);
+  return permitidos.includes(origen) ? origen : null;
+}
+
+function conCors(respuesta, origen) {
+  respuesta.headers.set('Access-Control-Allow-Origin', origen);
+  respuesta.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  respuesta.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  respuesta.headers.set('Access-Control-Max-Age', '86400');
+  respuesta.headers.set('Vary', 'Origin');
+  return respuesta;
+}
+
+async function desdeAgenda(request, env) {
+  const datos = await leerJson(request);
+  const agendaId = String(datos.agenda_id || '').trim().slice(0, 100);
+  if (!agendaId) throw new ErrorHttp(400, 'Primero guarda la tarea en la agenda.');
+  // El link del curso y la fecha del boletín los pone el administrador después.
+  const curso = validarCurso({ ...datos, link: '', fecha_boletin: '' });
+  const previa = await env.DB.prepare('SELECT * FROM cursos WHERE agenda_id = ?').bind(agendaId).first();
+  if (previa && previa.estado === 'lista') {
+    throw new ErrorHttp(409, 'Esta tarea ya está en cursos abiertos y el diseñador ya la terminó.');
+  }
+  if (previa) {
+    await env.DB
+      .prepare(`UPDATE cursos SET nombre = ?, fecha = ?, hora_inicio = ?, hora_fin = ?, link_zoom = ?, observaciones = ?,
+                obs_ok = CASE WHEN observaciones = ? THEN obs_ok ELSE 0 END, actualizado_en = datetime('now')
+                WHERE id = ?`)
+      .bind(curso.nombre, curso.fecha, curso.horaInicio, curso.horaFin, curso.linkZoom, curso.observaciones,
+        curso.observaciones, previa.id)
+      .run();
+    return json({ ok: true, actualizada: true });
+  }
+  await env.DB
+    .prepare(`INSERT INTO cursos (nombre, fecha, hora_inicio, hora_fin, link_zoom, observaciones, creado_por, agenda_id)
+              VALUES (?, ?, ?, ?, ?, ?, 'agenda', ?)`)
+    .bind(curso.nombre, curso.fecha, curso.horaInicio, curso.horaFin, curso.linkZoom, curso.observaciones, agendaId)
+    .run();
+  return json({ ok: true, actualizada: false }, 201);
 }
 
 // ---------- Rutas ----------
@@ -351,6 +400,21 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
+
+    if (url.pathname === '/api/desde-agenda') {
+      const origen = origenAgenda(request, env);
+      if (!origen) return json({ error: 'Solo la agenda puede enviar tareas por aquí.' }, 403);
+      if (request.method === 'OPTIONS') return conCors(new Response(null, { status: 204 }), origen);
+      if (request.method !== 'POST') return conCors(json({ error: 'Ruta no encontrada.' }, 404), origen);
+      try {
+        await prepararBase(env.DB, env);
+        return conCors(await desdeAgenda(request, env), origen);
+      } catch (e) {
+        if (e instanceof ErrorHttp) return conCors(json({ error: e.message }, e.estado), origen);
+        console.error(e);
+        return conCors(json({ error: 'Ocurrió un error inesperado. Intenta de nuevo.' }, 500), origen);
+      }
+    }
 
     try {
       await prepararBase(env.DB, env);
