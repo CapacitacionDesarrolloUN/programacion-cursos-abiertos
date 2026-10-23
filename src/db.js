@@ -7,9 +7,13 @@ export const PROMPT_POR_DEFECTO = `A realistic, natural-looking photograph that 
 
 Style: candid documentary photography, natural light, true-to-life colors, real skin texture and small everyday imperfections, shot on a full-frame camera with a 35mm lens. It must not look artificial, staged, CGI, 3D rendered, illustrated or overly polished.
 
-The image is purely visual and clean: blank surfaces, no signage, no screens showing writing, no logos, no watermarks, no captions, no lettering anywhere.`;
+Apart from the brand logo described below (if any), the image is purely visual and clean: no signage, no captions, no watermarks, no readable words or lettering anywhere.`;
 
-const PROMPT_ANTERIOR_FINAL = 'Strictly no text of any kind: no letters, words, numbers, captions, signs, screens with writing, logos or watermarks.';
+// Versiones anteriores de la instrucción por defecto. Si la guardada es una de ellas, se actualiza sola.
+const FINALES_ANTERIORES = [
+  'Strictly no text of any kind: no letters, words, numbers, captions, signs, screens with writing, logos or watermarks.',
+  'The image is purely visual and clean: blank surfaces, no signage, no screens showing writing, no logos, no watermarks, no captions, no lettering anywhere.',
+];
 
 const ESQUEMA = [
   `CREATE TABLE IF NOT EXISTS cursos (
@@ -57,6 +61,9 @@ const COLUMNAS_NUEVAS = {
     lista_en: 'TEXT',
     // 0 = el administrador todavía no ha visto que la tarea quedó lista.
     aviso_visto: 'INTEGER NOT NULL DEFAULT 1',
+    // Horas en formato 24 h ("14:00"), como en la agenda de Capacitación.
+    hora_inicio: 'TEXT',
+    hora_fin: 'TEXT',
   },
 };
 
@@ -80,11 +87,18 @@ export async function prepararBase(db, env) {
     .prepare(`INSERT OR IGNORE INTO ajustes (clave, valor) VALUES ('prompt', ?)`)
     .bind(PROMPT_POR_DEFECTO)
     .run();
-  // Si la instrucción guardada es la original de la primera versión, se actualiza a la nueva.
-  await db
-    .prepare(`UPDATE ajustes SET valor = ? WHERE clave = 'prompt' AND valor = ?`)
-    .bind(PROMPT_POR_DEFECTO, PROMPT_POR_DEFECTO.replace(/The image is purely visual[^`]*$/, PROMPT_ANTERIOR_FINAL))
-    .run();
+  // Nombres para el saludo de cada vista. Se cambian en Ajustes.
+  await db.batch([
+    db.prepare(`INSERT OR IGNORE INTO ajustes (clave, valor) VALUES ('nombre_admin', 'Charlie')`),
+    db.prepare(`INSERT OR IGNORE INTO ajustes (clave, valor) VALUES ('nombre_disenador', 'Luis')`),
+  ]);
+  const final = PROMPT_POR_DEFECTO.slice(PROMPT_POR_DEFECTO.lastIndexOf('\n\n') + 2);
+  for (const anterior of FINALES_ANTERIORES) {
+    await db
+      .prepare(`UPDATE ajustes SET valor = ? WHERE clave = 'prompt' AND valor = ?`)
+      .bind(PROMPT_POR_DEFECTO, PROMPT_POR_DEFECTO.replace(final, anterior))
+      .run();
+  }
   await prepararSesiones(db, env);
   listo = true;
 }

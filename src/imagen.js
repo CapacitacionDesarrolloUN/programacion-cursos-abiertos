@@ -57,9 +57,74 @@ async function generarConWorkersAI(env, prompt, formato) {
   return { base64, tipo: tipoDesdeBase64(base64) };
 }
 
+// Marcas que, si aparecen en el nombre del curso, se piden con su logotipo dentro de la imagen.
+// Para agregar una: [nombre oficial, palabras que la delatan en el título (en minúsculas)].
+const MARCAS = [
+  ['Microsoft Excel', ['excel']],
+  ['Microsoft Power BI', ['power bi', 'powerbi']],
+  ['Microsoft Word', ['word']],
+  ['Microsoft PowerPoint', ['powerpoint', 'power point']],
+  ['Microsoft Teams', ['teams']],
+  ['Microsoft Outlook', ['outlook']],
+  ['Microsoft Forms', ['forms']],
+  ['Microsoft SharePoint', ['sharepoint']],
+  ['Microsoft Copilot', ['copilot']],
+  ['Microsoft 365', ['microsoft 365', 'office 365']],
+  ['Python', ['python']],
+  ['R (the programming language)', ['lenguaje r', 'programación en r', 'rstudio']],
+  ['Java', ['java ']],
+  ['JavaScript', ['javascript']],
+  ['Tableau', ['tableau']],
+  ['SAP', ['sap']],
+  ['Google Sheets', ['google sheets', 'hojas de cálculo de google']],
+  ['Google Workspace', ['google workspace']],
+  ['Google Analytics', ['google analytics']],
+  ['Gemini', ['gemini']],
+  ['ChatGPT', ['chatgpt', 'chat gpt']],
+  ['Claude', ['claude']],
+  ['Canva', ['canva']],
+  ['Figma', ['figma']],
+  ['Adobe Photoshop', ['photoshop']],
+  ['Adobe Illustrator', ['illustrator']],
+  ['Adobe Premiere Pro', ['premiere']],
+  ['AutoCAD', ['autocad']],
+  ['Zoom', ['zoom']],
+  ['Brightspace', ['brightspace']],
+  ['Moodle', ['moodle']],
+  ['Kahoot!', ['kahoot']],
+  ['Notion', ['notion']],
+  ['Trello', ['trello']],
+  ['Jira', ['jira']],
+  ['Salesforce', ['salesforce']],
+  ['HubSpot', ['hubspot']],
+  ['LinkedIn', ['linkedin']],
+  ['Instagram', ['instagram']],
+  ['Facebook', ['facebook']],
+  ['TikTok', ['tiktok']],
+  ['WhatsApp', ['whatsapp']],
+  ['YouTube', ['youtube']],
+  ['SPSS', ['spss']],
+  ['MySQL', ['mysql']],
+  ['GitHub', ['github']],
+];
+
+export function marcasEnTitulo(titulo) {
+  const texto = ` ${titulo.toLowerCase().replace(/[^\p{L}\p{N}!]+/gu, ' ')} `;
+  return MARCAS
+    .filter(([, claves]) => claves.some((c) => texto.includes(` ${c.trim()} `)))
+    .map(([nombre]) => nombre)
+    .slice(0, 2);
+}
+
 export function armarPrompt(plantilla, titulo, ajuste) {
   let prompt = plantilla.replaceAll('{titulo}', titulo);
   if (!plantilla.includes('{titulo}')) prompt += `\n\nTraining course title: "${titulo}".`;
+  const marcas = marcasEnTitulo(titulo);
+  if (marcas.length) {
+    prompt += `\n\nBrand logo: the course is about ${marcas.join(' and ')}. Include the official ${marcas.join(' and ')} logo `
+      + 'exactly as it really looks (correct shape and colors), placed naturally in the scene, for example on a laptop '
+      + 'screen, a sticker on a laptop, a mug or a slide in the background. It must be recognizable but not dominate the photo.';
+  }
   if (ajuste) prompt += `\n\nAdditional direction (may be written in Spanish): ${ajuste}`;
   return prompt;
 }

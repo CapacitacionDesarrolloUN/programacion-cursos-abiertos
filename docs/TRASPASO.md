@@ -7,7 +7,8 @@ Esta guía es para cuando cambia el administrador (quien programa los cursos) o 
 | Qué | Dónde | Quién lo tiene hoy |
 |---|---|---|
 | Dirección de la app | <https://programacion-cursos-abiertos.capacitacion-acb.workers.dev> | Cualquiera con el link (pide contraseña) |
-| Contraseñas de administrador y diseñador | App → **Ajustes → Contraseñas** | Quien ocupa cada cargo |
+| Códigos de acceso de administrador y diseñador | App → **Ajustes → Códigos de acceso** | Quien ocupa cada cargo |
+| Nombre que usa el saludo de cada vista | App → **Ajustes → Nombres del saludo** | Administrador |
 | Cuenta de Cloudflare (hosting, base de datos e IA de imágenes) | <https://dash.cloudflare.com> | _(completar: correo dueño)_ |
 | Repositorio del código | GitHub → `CapacitacionDesarrolloUN/programacion-cursos-abiertos` | Organización `CapacitacionDesarrolloUN` |
 
@@ -15,8 +16,9 @@ Mantén esta tabla al día. Edítala desde GitHub con el lápiz ✏️.
 
 ## Si se va el diseñador
 
-1. El administrador entra a la app → **Ajustes → Contraseñas**.
-2. Cambia la contraseña de *Diseñador* y se la entrega a quien llega.
+1. El administrador entra a la app → **Ajustes → Códigos de acceso**.
+2. Cambia el código de *Diseño* y se lo entrega a quien llega.
+3. En **Ajustes → Nombres del saludo**, cambia el nombre del diseñador para que la app salude a quien llega.
 
 Listo. Quien se fue ya no puede entrar, aunque recuerde la contraseña anterior. No hay que tocar Cloudflare ni GitHub.
 
@@ -24,7 +26,7 @@ Listo. Quien se fue ya no puede entrar, aunque recuerde la contraseña anterior.
 
 Hazlo **antes del último día** de quien se va:
 
-1. **App:** en **Ajustes → Contraseñas**, cambia la de *Administrador* y entrégasela a quien llega. Quien llega entra y comprueba que ve las pestañas Programar tareas, Vista diseñador y Ajustes.
+1. **App:** en **Ajustes → Códigos de acceso**, cambia el de *Administrador* y entrégaselo a quien llega, y en **Nombres del saludo** pon su nombre. Quien llega entra y comprueba que ve las pestañas Programar tareas, Vista de (diseñador) y Ajustes.
 2. **Cloudflare:** en **Manage Account → Members**, invita a quien llega como *Super Administrator*. Cuando acepte, quita al anterior. Si la cuenta usa un buzón compartido del área, basta con entregar ese acceso.
 3. **Google (solo si se activó Gemini, que es opcional):** en <https://console.cloud.google.com/iam-admin/iam> agrega a quien llega como *Owner* del proyecto de la llave y como administrador de facturación. Después quita al anterior.
 4. **GitHub:** pide a un dueño de la organización `CapacitacionDesarrolloUN` que agregue a quien llega. Si quien se va era el único dueño, primero debe hacer dueño a quien llega.

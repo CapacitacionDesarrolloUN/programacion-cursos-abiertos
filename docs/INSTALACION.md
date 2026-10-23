@@ -30,7 +30,7 @@ Si Cloudflare muestra un aviso amarillo que propone copiar valores a `wrangler.j
 
 Guarda los cambios (**Deploy**). Las contraseñas **nunca** se escriben en el código, porque el repositorio es público.
 
-Las dos contraseñas solo se leen de aquí la primera vez. Después viven cifradas en la base de datos y se cambian desde la app, en **Ajustes → Contraseñas**. Por eso, cambiar estos secretos más adelante no tiene efecto; para recuperar el acceso, ver [MANTENIMIENTO.md](MANTENIMIENTO.md).
+Las dos contraseñas solo se leen de aquí la primera vez. Después viven cifradas en la base de datos y se cambian desde la app, en **Ajustes → Códigos de acceso** (en la app se les llama «código»). Por eso, cambiar estos secretos más adelante no tiene efecto; para recuperar el acceso, ver [MANTENIMIENTO.md](MANTENIMIENTO.md).
 
 ## 3. Primer uso
 
@@ -38,7 +38,9 @@ Las dos contraseñas solo se leen de aquí la primera vez. Después viven cifrad
 2. Con **+ Programar tarea**, crea una tarea de prueba.
 3. Sal, entra con la contraseña de diseñador y genera la imagen de esa tarea.
 
-Listo. Guarda la dirección de la app en favoritos y compártela con el diseñador junto con su contraseña.
+4. En **Ajustes → Nombres del saludo**, escribe el nombre de cada persona (por defecto: Charlie y Luis).
+
+Listo. Guarda la dirección de la app en favoritos y compártela con el diseñador junto con su código.
 
 ## Opcional: imágenes con Google Gemini (de pago)
 

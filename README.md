@@ -2,10 +2,10 @@
 
 App web de Capacitación y Desarrollo (Uninorte) para programar los cursos abiertos. Reemplaza el Excel que se usaba antes.
 
-Tiene dos caras, y se entra a cada una con su propia contraseña:
+Tiene dos caras, y se entra a cada una con su propio código (contraseña):
 
-- **Administrador.** Con el botón **Programar tarea** le asigna al diseñador cada curso: nombre de la actividad, fecha, link del curso (Brightspace), link de Zoom (con un botón que abre Zoom para crear la reunión) y fecha de publicación en el boletín. También puede pegar varias filas desde Excel, cambiar las contraseñas y ajustar la instrucción que recibe la IA para las imágenes.
-- **Diseñador.** Ve sus **tareas pendientes**, ordenadas por fecha de boletín y con aviso cuando están por vencer o atrasadas. Copia cada dato con un clic, genera una imagen realista y sin texto, la descarga y marca la tarea como lista. Al administrador le llega un aviso dentro de la app (y un contador en la pestaña) cada vez que el diseñador termina una tarea. En la sección **Tareas realizadas** ve cada una con su imagen y la fecha en que se terminó.
+- **Administrador.** Con el botón **Programar tarea** le asigna al diseñador cada curso: nombre de la actividad, fecha, hora inicio y hora fin, link del curso (Brightspace), link de Zoom (con un botón que abre Zoom para crear la reunión) y fecha de publicación en el boletín. También puede pegar varias filas desde Excel, cambiar los códigos de acceso y los nombres del saludo, y ajustar la instrucción que recibe la IA para las imágenes.
+- **Diseñador.** Ve sus **tareas pendientes**, ordenadas por fecha de boletín y con aviso cuando están por vencer o atrasadas. Copia cada dato con un clic, genera una imagen realista y sin texto (con el logotipo de la marca si el curso es de Excel, Power BI, Python, etc.), la descarga y marca la tarea como lista. Al administrador le llega un aviso dentro de la app (y un contador en la pestaña) cada vez que el diseñador termina una tarea. En la sección **Tareas realizadas** ve cada una con su imagen y la fecha en que se terminó.
 
 ## Documentación
 

@@ -2,26 +2,33 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cursos abiertos</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23b4232a'/><path d='M9 10h14M9 16h14M9 22h9' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#CB333B">
+  <title>Cursos abiertos · Uninorte</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23CB333B'/><path d='M10 9v9a6 6 0 0 0 12 0V9' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round'/><circle cx='24.5' cy='24.5' r='3' fill='%23FFCD00'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Albert+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
-  <header class="barra">
-    <div class="marca">
-      <span class="logo" aria-hidden="true"></span>
-      <div>
-        <strong>Cursos abiertos</strong>
-        <small>Capacitación y Desarrollo</small>
+<body class="sin-sesion">
+  <header class="barra" id="barra" hidden>
+    <div class="barra-interior">
+      <div class="marca">
+        <span class="logo" role="img" aria-label="Universidad del Norte"></span>
+        <span class="marca-separador" aria-hidden="true"></span>
+        <span class="marca-texto">
+          <strong>Cursos abiertos</strong>
+          <small>Capacitación y Desarrollo</small>
+        </span>
       </div>
+      <nav id="pestanas" class="pestanas" aria-label="Secciones"></nav>
+      <div id="quien" class="quien"></div>
     </div>
-    <nav id="pestanas" class="pestanas" hidden></nav>
-    <div id="quien" class="quien"></div>
   </header>
 
   <main id="app">
-    <p class="cargando">Cargando…</p>
+    <div class="cargando"><span class="punto"></span><span class="punto"></span><span class="punto"></span></div>
   </main>
 
   <div id="aviso" class="aviso" role="status" aria-live="polite"></div>

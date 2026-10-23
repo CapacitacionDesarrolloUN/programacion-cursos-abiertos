@@ -28,8 +28,8 @@
     "IMAGEN_MODELO": "@cf/black-forest-labs/flux-2-klein-4b",
     // Solo si se agrega el secreto GEMINI_API_KEY (de pago): modelo de Google Gemini.
     "GEMINI_MODEL": "gemini-3.1-flash-lite-image",
-    // Costo aproximado por imagen en dólares con Gemini, solo para el contador de uso.
-    "COSTO_IMAGEN_USD": "0.045",
+    // Imágenes gratis por día (aprox.) con Workers AI. Solo sirve para el contador "quedan hoy".
+    "IMAGENES_DIA": "90",
     // Página que abre el botón "Generar link de Zoom" para crear la reunión.
     "ZOOM_URL": "https://zoom.us/meeting#/upcoming"
   },
@@ -44,7 +44,7 @@
       "vars": {
         "IMAGEN_MODELO": "@cf/black-forest-labs/flux-2-klein-4b",
         "GEMINI_MODEL": "gemini-3.1-flash-lite-image",
-        "COSTO_IMAGEN_USD": "0.045",
+        "IMAGENES_DIA": "90",
         "ZOOM_URL": "https://zoom.us/meeting#/upcoming"
       }
     }

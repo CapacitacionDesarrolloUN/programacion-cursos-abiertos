@@ -138,7 +138,7 @@ export async function ingresar(request, db, clave) {
       db.prepare('INSERT INTO intentos (ip) VALUES (?)').bind(ip),
       db.prepare(`DELETE FROM intentos WHERE creado_en < datetime('now', '-1 day')`),
     ]);
-    return { estado: 401, error: 'Contraseña incorrecta.' };
+    return { estado: 401, error: 'Ese código no es correcto. Revísalo e intenta de nuevo.' };
   }
   const token = await crearToken(db, rolEncontrado);
   return { rol: rolEncontrado, cookie: cookieSesion(request, token, DURACION_DIAS * 86400) };

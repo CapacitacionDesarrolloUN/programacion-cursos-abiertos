@@ -5,6 +5,7 @@ import { rolDeSesion, ingresar, cookieSalida, cambiarClave, rolDeClave, ROLES } 
 import { armarPrompt, generarImagen, proveedorImagenes, FORMATOS } from './imagen.js';
 
 const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 class ErrorHttp extends Error {
   constructor(estado, mensaje) {
@@ -45,7 +46,15 @@ function validarCurso(datos) {
   const link = String(datos.link || '').trim();
   const linkZoom = String(datos.link_zoom || '').trim();
   const fechaBoletin = String(datos.fecha_boletin || '').trim();
+  const horaInicio = String(datos.hora_inicio || '').trim();
+  const horaFin = String(datos.hora_fin || '').trim();
   if (!nombre) throw new ErrorHttp(400, 'La actividad necesita un nombre.');
+  for (const hora of [horaInicio, horaFin]) {
+    if (hora && !HORA.test(hora)) throw new ErrorHttp(400, `La hora de "${nombre}" no es válida. Escríbela así: 2:00 o 14:00.`);
+  }
+  if (horaInicio && horaFin && horaFin <= horaInicio) {
+    throw new ErrorHttp(400, `En "${nombre}", la hora de fin debe ser después de la de inicio.`);
+  }
   if (!fechaValida(fecha)) throw new ErrorHttp(400, `La fecha de "${nombre}" no es válida.`);
   if (fechaBoletin && !fechaValida(fechaBoletin)) {
     throw new ErrorHttp(400, `La fecha de boletín de "${nombre}" no es válida.`);
@@ -55,7 +64,7 @@ function validarCurso(datos) {
       throw new ErrorHttp(400, `El link ${cual} de "${nombre}" debe empezar por http:// o https://`);
     }
   }
-  return { nombre, fecha, link, linkZoom, fechaBoletin: fechaBoletin || null };
+  return { nombre, fecha, link, linkZoom, fechaBoletin: fechaBoletin || null, horaInicio: horaInicio || null, horaFin: horaFin || null };
 }
 
 function cursoPublico(fila) {
@@ -63,6 +72,8 @@ function cursoPublico(fila) {
     id: fila.id,
     nombre: fila.nombre,
     fecha: fila.fecha,
+    hora_inicio: fila.hora_inicio || '',
+    hora_fin: fila.hora_fin || '',
     link: fila.link,
     link_zoom: fila.link_zoom || '',
     fecha_boletin: fila.fecha_boletin,
@@ -81,6 +92,24 @@ async function buscarCurso(env, id) {
   return fila;
 }
 
+async function leerAjuste(env, clave, porDefecto = '') {
+  return (await env.DB.prepare('SELECT valor FROM ajustes WHERE clave = ?').bind(clave).first())?.valor || porDefecto;
+}
+
+// Cupo gratis de Workers AI: se cuenta lo generado desde las 00:00 UTC (7:00 p. m. en Colombia),
+// que es cuando Cloudflare lo renueva. Es aproximado: Cloudflare no informa el saldo exacto.
+async function cupoImagenes(env) {
+  const proveedor = proveedorImagenes(env);
+  const hoy = await env.DB.prepare(`SELECT COUNT(*) AS total FROM generaciones WHERE creado_en >= date('now')`).first();
+  const limite = Number(env.IMAGENES_DIA || 90);
+  return {
+    gratis: proveedor.gratis,
+    hoy: hoy?.total || 0,
+    limite,
+    quedan: proveedor.gratis ? Math.max(0, limite - (hoy?.total || 0)) : null,
+  };
+}
+
 function nombreArchivo(nombre, tipo) {
   const base = nombre
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -97,7 +126,17 @@ async function rutas(request, env, usuario, partes) {
   const [recurso, id, sub] = partes;
 
   if (recurso === 'yo' && metodo === 'GET') {
-    return json({ rol: usuario.rol, zoom_url: env.ZOOM_URL || 'https://zoom.us/meeting#/upcoming' });
+    const porDefecto = usuario.rol === 'admin' ? 'Charlie' : 'Luis';
+    return json({
+      rol: usuario.rol,
+      nombre: await leerAjuste(env, `nombre_${usuario.rol}`, porDefecto),
+      // Nombre del otro rol, para mensajes como "Luis terminó una tarea".
+      otro: usuario.rol === 'admin'
+        ? await leerAjuste(env, 'nombre_disenador', 'Luis')
+        : await leerAjuste(env, 'nombre_admin', 'Charlie'),
+      zoom_url: env.ZOOM_URL || 'https://zoom.us/meeting#/upcoming',
+      imagenes: await cupoImagenes(env),
+    });
   }
 
   if (recurso === 'cursos') {
@@ -106,8 +145,8 @@ async function rutas(request, env, usuario, partes) {
       const filtro = url.searchParams.get('estado');
       const consulta = ESTADOS.includes(filtro)
         ? env.DB.prepare(`SELECT * FROM cursos WHERE estado = ?
-                          ORDER BY COALESCE(fecha_boletin, fecha), fecha, nombre`).bind(filtro)
-        : env.DB.prepare('SELECT * FROM cursos ORDER BY COALESCE(fecha_boletin, fecha), fecha, nombre');
+                          ORDER BY COALESCE(fecha_boletin, fecha), fecha, hora_inicio, nombre`).bind(filtro)
+        : env.DB.prepare('SELECT * FROM cursos ORDER BY COALESCE(fecha_boletin, fecha), fecha, hora_inicio, nombre');
       const { results } = await consulta.all();
       return json(results.map(cursoPublico));
     }
@@ -116,9 +155,9 @@ async function rutas(request, env, usuario, partes) {
       soloAdmin(usuario);
       const curso = validarCurso(await leerJson(request));
       const fila = await env.DB
-        .prepare(`INSERT INTO cursos (nombre, fecha, link, link_zoom, fecha_boletin, creado_por)
-                  VALUES (?, ?, ?, ?, ?, ?) RETURNING *`)
-        .bind(curso.nombre, curso.fecha, curso.link, curso.linkZoom, curso.fechaBoletin, usuario.rol)
+        .prepare(`INSERT INTO cursos (nombre, fecha, hora_inicio, hora_fin, link, link_zoom, fecha_boletin, creado_por)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+        .bind(curso.nombre, curso.fecha, curso.horaInicio, curso.horaFin, curso.link, curso.linkZoom, curso.fechaBoletin, usuario.rol)
         .first();
       return json(cursoPublico(fila), 201);
     }
@@ -130,9 +169,9 @@ async function rutas(request, env, usuario, partes) {
       if (filas.length > 200) throw new ErrorHttp(400, 'Importa máximo 200 tareas a la vez.');
       const cursos = filas.map(validarCurso);
       await env.DB.batch(cursos.map((c) => env.DB
-        .prepare(`INSERT INTO cursos (nombre, fecha, link, link_zoom, fecha_boletin, creado_por)
-                  VALUES (?, ?, ?, ?, ?, ?)`)
-        .bind(c.nombre, c.fecha, c.link, c.linkZoom, c.fechaBoletin, usuario.rol)));
+        .prepare(`INSERT INTO cursos (nombre, fecha, hora_inicio, hora_fin, link, link_zoom, fecha_boletin, creado_por)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(c.nombre, c.fecha, c.horaInicio, c.horaFin, c.link, c.linkZoom, c.fechaBoletin, usuario.rol)));
       return json({ importados: cursos.length }, 201);
     }
 
@@ -151,9 +190,9 @@ async function rutas(request, env, usuario, partes) {
       await buscarCurso(env, cursoId);
       const curso = validarCurso(await leerJson(request));
       const fila = await env.DB
-        .prepare(`UPDATE cursos SET nombre = ?, fecha = ?, link = ?, link_zoom = ?, fecha_boletin = ?,
-                  actualizado_en = datetime('now') WHERE id = ? RETURNING *`)
-        .bind(curso.nombre, curso.fecha, curso.link, curso.linkZoom, curso.fechaBoletin, cursoId)
+        .prepare(`UPDATE cursos SET nombre = ?, fecha = ?, hora_inicio = ?, hora_fin = ?, link = ?, link_zoom = ?,
+                  fecha_boletin = ?, actualizado_en = datetime('now') WHERE id = ? RETURNING *`)
+        .bind(curso.nombre, curso.fecha, curso.horaInicio, curso.horaFin, curso.link, curso.linkZoom, curso.fechaBoletin, cursoId)
         .first();
       return json(cursoPublico(fila));
     }
@@ -235,9 +274,9 @@ async function rutas(request, env, usuario, partes) {
       const { rol, clave } = await leerJson(request);
       const nueva = String(clave || '');
       if (!ROLES.includes(rol)) throw new ErrorHttp(400, 'Rol no válido.');
-      if (nueva.length < 6) throw new ErrorHttp(400, 'La contraseña debe tener al menos 6 caracteres.');
+      if (nueva.length < 6) throw new ErrorHttp(400, 'El código debe tener al menos 6 caracteres.');
       const duena = (await rolDeClave(env.DB, nueva)).rol;
-      if (duena && duena !== rol) throw new ErrorHttp(400, 'Esa contraseña ya la usa el otro rol. Elige una distinta.');
+      if (duena && duena !== rol) throw new ErrorHttp(400, 'Ese código ya lo usa el otro rol. Elige uno distinto.');
       await cambiarClave(env.DB, rol, nueva);
       // Cambiar la propia contraseña cierra la sesión actual; se renueva para no sacar al admin.
       const respuesta = json({ ok: true });
@@ -247,19 +286,32 @@ async function rutas(request, env, usuario, partes) {
       }
       return respuesta;
     }
+    if (id === 'nombres' && metodo === 'PUT') {
+      const datos = await leerJson(request);
+      const nombres = ROLES.map((rol) => [rol, String(datos[rol] || '').trim()]);
+      for (const [, nombre] of nombres) {
+        if (!nombre || nombre.length > 40) throw new ErrorHttp(400, 'Cada nombre debe tener entre 1 y 40 caracteres.');
+      }
+      await env.DB.batch(nombres.map(([rol, nombre]) => env.DB
+        .prepare(`INSERT INTO ajustes (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`)
+        .bind(`nombre_${rol}`, nombre)));
+      return json({ ok: true });
+    }
     if (!id && metodo === 'GET') {
-      const fila = await env.DB.prepare(`SELECT valor FROM ajustes WHERE clave = 'prompt'`).first();
       const mes = await env.DB
         .prepare(`SELECT COUNT(*) AS total FROM generaciones WHERE creado_en >= date('now', 'start of month')`)
         .first();
       return json({
-        prompt: fila?.valor || PROMPT_POR_DEFECTO,
+        prompt: await leerAjuste(env, 'prompt', PROMPT_POR_DEFECTO),
         prompt_por_defecto: PROMPT_POR_DEFECTO,
+        nombres: {
+          admin: await leerAjuste(env, 'nombre_admin', 'Charlie'),
+          disenador: await leerAjuste(env, 'nombre_disenador', 'Luis'),
+        },
+        imagenes: await cupoImagenes(env),
         imagenes_mes: mes?.total || 0,
-        costo_imagen_usd: proveedorImagenes(env).gratis ? 0 : Number(env.COSTO_IMAGEN_USD || 0.045),
         modelo: proveedorImagenes(env).modelo,
         proveedor: proveedorImagenes(env).nombre,
-        gratis: proveedorImagenes(env).gratis,
         formatos: FORMATOS,
       });
     }
@@ -302,7 +354,7 @@ export default {
       }
 
       const rol = await rolDeSesion(request, env.DB);
-      if (!rol) return json({ error: 'Ingresa la contraseña para continuar.', sin_sesion: true }, 401);
+      if (!rol) return json({ error: 'Escribe tu código para continuar.', sin_sesion: true }, 401);
       const usuario = { rol };
 
       const partes = url.pathname.replace(/^\/api\/+/, '').split('/').filter(Boolean);
