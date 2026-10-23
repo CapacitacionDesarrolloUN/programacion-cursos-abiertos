@@ -27,7 +27,9 @@
     // Modelo de Google Gemini que genera las imágenes. Cámbialo si Google lo retira.
     "GEMINI_MODEL": "gemini-2.5-flash-image",
     // Costo aproximado por imagen en dólares, solo para el contador de uso.
-    "COSTO_IMAGEN_USD": "0.039"
+    "COSTO_IMAGEN_USD": "0.039",
+    // Página que abre el botón "Generar link de Zoom" para crear la reunión.
+    "ZOOM_URL": "https://zoom.us/meeting#/upcoming"
   },
 
   "observability": { "enabled": true }

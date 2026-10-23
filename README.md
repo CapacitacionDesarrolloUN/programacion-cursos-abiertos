@@ -4,8 +4,8 @@ App web de Capacitación y Desarrollo (Uninorte) para programar los cursos abier
 
 Tiene dos caras, y se entra a cada una con su propia contraseña:
 
-- **Administrador.** Registra cada curso (nombre, fecha y link de Brightspace), uno por uno o pegando varias filas desde Excel. También cambia las contraseñas y ajusta la instrucción que recibe la IA para las imágenes.
-- **Diseñador.** Ve los próximos cursos, copia cada dato con un clic y genera para cada curso una imagen realista y sin texto, que luego descarga.
+- **Administrador.** Con el botón **Programar tarea** le asigna al diseñador cada curso: nombre de la actividad, fecha, link del curso (Brightspace), link de Zoom (con un botón que abre Zoom para crear la reunión) y fecha de publicación en el boletín. También puede pegar varias filas desde Excel, cambiar las contraseñas y ajustar la instrucción que recibe la IA para las imágenes.
+- **Diseñador.** Ve sus **tareas pendientes**, ordenadas por fecha de boletín y con aviso cuando están por vencer o atrasadas. Copia cada dato con un clic, genera una imagen realista y sin texto, la descarga y marca la tarea como lista.
 
 ## Documentación
 
@@ -18,7 +18,7 @@ Tiene dos caras, y se entra a cada una con su propia contraseña:
 ## Cómo está hecha
 
 - **Cloudflare Workers** sirve la página y la API (`src/`), con plan gratuito.
-- **Cloudflare D1** es la base de datos (cursos, ajustes y contraseñas cifradas). Las tablas se crean solas.
+- **Cloudflare D1** es la base de datos (tareas, ajustes y contraseñas cifradas). Las tablas y columnas nuevas se crean solas.
 - **Cloudflare R2** guarda las imágenes generadas.
 - **Ingreso con contraseña:** hay una para el administrador y otra para el diseñador. Se guardan cifradas, se pueden cambiar desde **Ajustes** y la app bloquea la entrada por 15 minutos después de 8 intentos fallidos.
 - **Google Gemini** ("Nano Banana") genera las imágenes, a unos US$0,039 por imagen.

@@ -12,6 +12,10 @@ La app casi no necesita mantenimiento. Estos son los casos que pueden aparecer c
 
 Un administrador puede ajustar la instrucción en **Ajustes → Instrucción para las imágenes**. `{titulo}` se reemplaza por el nombre del curso. El diseñador también puede escribir una indicación puntual en cada curso, por ejemplo "personas en un laboratorio".
 
+## Cambiar la página que abre "Generar link de Zoom"
+
+En GitHub, edita `wrangler.jsonc` y cambia `ZOOM_URL`. Por ejemplo, puedes usar la página de programar reuniones de la cuenta institucional de Zoom.
+
 ## Revisar el gasto
 
 - En la app: **Ajustes** muestra cuántas imágenes se generaron en el mes y su costo aproximado.

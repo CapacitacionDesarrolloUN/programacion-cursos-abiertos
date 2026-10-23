@@ -32,18 +32,30 @@ function soloAdmin(usuario) {
   if (usuario.rol !== 'admin') throw new ErrorHttp(403, 'Esta acción es solo para administradores.');
 }
 
+const ESTADOS = ['pendiente', 'lista'];
+
+function fechaValida(fecha) {
+  return FECHA_ISO.test(fecha) && !Number.isNaN(Date.parse(fecha));
+}
+
+// Cada "tarea" es un curso que el administrador le asigna al diseñador.
 function validarCurso(datos) {
   const nombre = String(datos.nombre || '').trim();
   const fecha = String(datos.fecha || '').trim();
   const link = String(datos.link || '').trim();
-  if (!nombre) throw new ErrorHttp(400, 'El curso necesita un nombre.');
-  if (!FECHA_ISO.test(fecha) || Number.isNaN(Date.parse(fecha))) {
-    throw new ErrorHttp(400, `La fecha de "${nombre}" no es válida.`);
+  const linkZoom = String(datos.link_zoom || '').trim();
+  const fechaBoletin = String(datos.fecha_boletin || '').trim();
+  if (!nombre) throw new ErrorHttp(400, 'La actividad necesita un nombre.');
+  if (!fechaValida(fecha)) throw new ErrorHttp(400, `La fecha de "${nombre}" no es válida.`);
+  if (fechaBoletin && !fechaValida(fechaBoletin)) {
+    throw new ErrorHttp(400, `La fecha de boletín de "${nombre}" no es válida.`);
   }
-  if (link && !/^https?:\/\//i.test(link)) {
-    throw new ErrorHttp(400, `El link de "${nombre}" debe empezar por http:// o https://`);
+  for (const [valor, cual] of [[link, 'del curso'], [linkZoom, 'de Zoom']]) {
+    if (valor && !/^https?:\/\//i.test(valor)) {
+      throw new ErrorHttp(400, `El link ${cual} de "${nombre}" debe empezar por http:// o https://`);
+    }
   }
-  return { nombre, fecha, link };
+  return { nombre, fecha, link, linkZoom, fechaBoletin: fechaBoletin || null };
 }
 
 function cursoPublico(fila) {
@@ -52,6 +64,9 @@ function cursoPublico(fila) {
     nombre: fila.nombre,
     fecha: fila.fecha,
     link: fila.link,
+    link_zoom: fila.link_zoom || '',
+    fecha_boletin: fila.fecha_boletin,
+    estado: fila.estado || 'pendiente',
     tiene_imagen: Boolean(fila.imagen_key),
     imagen_en: fila.imagen_en,
     actualizado_en: fila.actualizado_en,
@@ -60,7 +75,7 @@ function cursoPublico(fila) {
 
 async function buscarCurso(env, id) {
   const fila = await env.DB.prepare('SELECT * FROM cursos WHERE id = ?').bind(id).first();
-  if (!fila) throw new ErrorHttp(404, 'Ese curso ya no existe.');
+  if (!fila) throw new ErrorHttp(404, 'Esa tarea ya no existe.');
   return fila;
 }
 
@@ -80,16 +95,17 @@ async function rutas(request, env, usuario, partes) {
   const [recurso, id, sub] = partes;
 
   if (recurso === 'yo' && metodo === 'GET') {
-    return json({ rol: usuario.rol });
+    return json({ rol: usuario.rol, zoom_url: env.ZOOM_URL || 'https://zoom.us/meeting#/upcoming' });
   }
 
   if (recurso === 'cursos') {
     if (!id && metodo === 'GET') {
       const url = new URL(request.url);
-      const desde = url.searchParams.get('desde');
-      const consulta = desde && FECHA_ISO.test(desde)
-        ? env.DB.prepare('SELECT * FROM cursos WHERE fecha >= ? ORDER BY fecha, nombre').bind(desde)
-        : env.DB.prepare('SELECT * FROM cursos ORDER BY fecha DESC, nombre');
+      const filtro = url.searchParams.get('estado');
+      const consulta = ESTADOS.includes(filtro)
+        ? env.DB.prepare(`SELECT * FROM cursos WHERE estado = ?
+                          ORDER BY COALESCE(fecha_boletin, fecha), fecha, nombre`).bind(filtro)
+        : env.DB.prepare('SELECT * FROM cursos ORDER BY COALESCE(fecha_boletin, fecha), fecha, nombre');
       const { results } = await consulta.all();
       return json(results.map(cursoPublico));
     }
@@ -98,8 +114,9 @@ async function rutas(request, env, usuario, partes) {
       soloAdmin(usuario);
       const curso = validarCurso(await leerJson(request));
       const fila = await env.DB
-        .prepare('INSERT INTO cursos (nombre, fecha, link, creado_por) VALUES (?, ?, ?, ?) RETURNING *')
-        .bind(curso.nombre, curso.fecha, curso.link, usuario.rol)
+        .prepare(`INSERT INTO cursos (nombre, fecha, link, link_zoom, fecha_boletin, creado_por)
+                  VALUES (?, ?, ?, ?, ?, ?) RETURNING *`)
+        .bind(curso.nombre, curso.fecha, curso.link, curso.linkZoom, curso.fechaBoletin, usuario.rol)
         .first();
       return json(cursoPublico(fila), 201);
     }
@@ -108,11 +125,12 @@ async function rutas(request, env, usuario, partes) {
       soloAdmin(usuario);
       const { filas } = await leerJson(request);
       if (!Array.isArray(filas) || filas.length === 0) throw new ErrorHttp(400, 'No hay filas para importar.');
-      if (filas.length > 200) throw new ErrorHttp(400, 'Importa máximo 200 cursos a la vez.');
+      if (filas.length > 200) throw new ErrorHttp(400, 'Importa máximo 200 tareas a la vez.');
       const cursos = filas.map(validarCurso);
       await env.DB.batch(cursos.map((c) => env.DB
-        .prepare('INSERT INTO cursos (nombre, fecha, link, creado_por) VALUES (?, ?, ?, ?)')
-        .bind(c.nombre, c.fecha, c.link, usuario.rol)));
+        .prepare(`INSERT INTO cursos (nombre, fecha, link, link_zoom, fecha_boletin, creado_por)
+                  VALUES (?, ?, ?, ?, ?, ?)`)
+        .bind(c.nombre, c.fecha, c.link, c.linkZoom, c.fechaBoletin, usuario.rol)));
       return json({ importados: cursos.length }, 201);
     }
 
@@ -124,9 +142,22 @@ async function rutas(request, env, usuario, partes) {
       await buscarCurso(env, cursoId);
       const curso = validarCurso(await leerJson(request));
       const fila = await env.DB
-        .prepare(`UPDATE cursos SET nombre = ?, fecha = ?, link = ?, actualizado_en = datetime('now')
+        .prepare(`UPDATE cursos SET nombre = ?, fecha = ?, link = ?, link_zoom = ?, fecha_boletin = ?,
+                  actualizado_en = datetime('now') WHERE id = ? RETURNING *`)
+        .bind(curso.nombre, curso.fecha, curso.link, curso.linkZoom, curso.fechaBoletin, cursoId)
+        .first();
+      return json(cursoPublico(fila));
+    }
+
+    // El diseñador marca la tarea como lista (o la reabre). El administrador también puede.
+    if (sub === 'estado' && metodo === 'PUT') {
+      await buscarCurso(env, cursoId);
+      const { estado } = await leerJson(request);
+      if (!ESTADOS.includes(estado)) throw new ErrorHttp(400, 'Estado no válido.');
+      const fila = await env.DB
+        .prepare(`UPDATE cursos SET estado = ?, lista_en = CASE WHEN ? = 'lista' THEN datetime('now') END
                   WHERE id = ? RETURNING *`)
-        .bind(curso.nombre, curso.fecha, curso.link, cursoId)
+        .bind(estado, estado, cursoId)
         .first();
       return json(cursoPublico(fila));
     }
@@ -141,7 +172,7 @@ async function rutas(request, env, usuario, partes) {
 
     if (sub === 'imagen' && metodo === 'GET') {
       const fila = await buscarCurso(env, cursoId);
-      if (!fila.imagen_key) throw new ErrorHttp(404, 'Este curso todavía no tiene imagen.');
+      if (!fila.imagen_key) throw new ErrorHttp(404, 'Esta tarea todavía no tiene imagen.');
       const objeto = await env.IMAGENES.get(fila.imagen_key);
       if (!objeto) throw new ErrorHttp(404, 'No se encontró la imagen. Genérala de nuevo.');
       const descargar = new URL(request.url).searchParams.has('descargar');

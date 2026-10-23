@@ -39,11 +39,32 @@ const ESQUEMA = [
   )`,
 ];
 
+// Columnas agregadas después de la primera versión. Se agregan solas si faltan.
+const COLUMNAS_NUEVAS = {
+  cursos: {
+    link_zoom: "TEXT NOT NULL DEFAULT ''",
+    fecha_boletin: 'TEXT',
+    estado: "TEXT NOT NULL DEFAULT 'pendiente'",
+    lista_en: 'TEXT',
+  },
+};
+
+async function agregarColumnasFaltantes(db) {
+  for (const [tabla, columnas] of Object.entries(COLUMNAS_NUEVAS)) {
+    const { results } = await db.prepare(`PRAGMA table_info(${tabla})`).all();
+    const existentes = new Set(results.map((c) => c.name));
+    for (const [nombre, tipo] of Object.entries(columnas)) {
+      if (!existentes.has(nombre)) await db.prepare(`ALTER TABLE ${tabla} ADD COLUMN ${nombre} ${tipo}`).run();
+    }
+  }
+}
+
 let listo = false;
 
 export async function prepararBase(db, env) {
   if (listo) return;
   await db.batch(ESQUEMA.map((sql) => db.prepare(sql)));
+  await agregarColumnasFaltantes(db);
   await db
     .prepare(`INSERT OR IGNORE INTO ajustes (clave, valor) VALUES ('prompt', ?)`)
     .bind(PROMPT_POR_DEFECTO)
