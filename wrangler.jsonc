@@ -1,7 +1,7 @@
 // Configuración de Cloudflare Workers. Ver docs/INSTALACION.md.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "programacion-cursos",
+  "name": "programacion-cursos-abiertos",
   "main": "src/index.js",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],

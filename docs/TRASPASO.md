@@ -6,6 +6,7 @@ Esta guía es para cuando cambia el administrador (quien programa los cursos) o 
 
 | Qué | Dónde | Quién lo tiene hoy |
 |---|---|---|
+| Dirección de la app | <https://programacion-cursos-abiertos.capacitacion-acb.workers.dev> | Cualquiera con el link (pide contraseña) |
 | Contraseñas de administrador y diseñador | App → **Ajustes → Contraseñas** | Quien ocupa cada cargo |
 | Cuenta de Cloudflare (hosting, base de datos e imágenes) | <https://dash.cloudflare.com> | _(completar: correo dueño)_ |
 | Cuenta de Google AI Studio y su facturación (imágenes) | <https://aistudio.google.com> y Google Cloud Billing | _(completar: correo dueño)_ |

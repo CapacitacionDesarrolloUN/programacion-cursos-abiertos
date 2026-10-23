@@ -13,7 +13,7 @@ El plan gratuito de Cloudflare alcanza para esta app y **no pide tarjeta**. La a
 3. Conecta GitHub, autoriza la organización `CapacitacionDesarrolloUN` y elige el repo `programacion-cursos-abiertos`.
 4. Deja los valores que propone (comando de despliegue `npx wrangler deploy`) y pulsa **Deploy**.
 
-En el primer despliegue Cloudflare crea sola la base de datos `programacion-cursos`. Al terminar te da una dirección del tipo `https://programacion-cursos.<tu-cuenta>.workers.dev`.
+En el primer despliegue Cloudflare crea sola la base de datos `programacion-cursos`. Al terminar te da una dirección del tipo `https://programacion-cursos-abiertos.<tu-cuenta>.workers.dev`.
 
 Si el despliegue falla porque no pudo crear la base de datos, créala a mano en **Storage & Databases → D1** con el nombre `programacion-cursos`. Después copia su **Database ID** en `wrangler.jsonc`, dentro de `d1_databases`, como `"database_id": "..."`, y vuelve a desplegar.
 
