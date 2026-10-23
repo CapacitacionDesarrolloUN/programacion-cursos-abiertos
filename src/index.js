@@ -2,7 +2,7 @@
 
 import { prepararBase, PROMPT_POR_DEFECTO } from './db.js';
 import { rolDeSesion, ingresar, cookieSalida, cambiarClave, rolDeClave, ROLES } from './sesion.js';
-import { armarPrompt, generarImagen, FORMATOS } from './imagen.js';
+import { armarPrompt, generarImagen, proveedorImagenes, FORMATOS } from './imagen.js';
 
 const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -256,8 +256,10 @@ async function rutas(request, env, usuario, partes) {
         prompt: fila?.valor || PROMPT_POR_DEFECTO,
         prompt_por_defecto: PROMPT_POR_DEFECTO,
         imagenes_mes: mes?.total || 0,
-        costo_imagen_usd: Number(env.COSTO_IMAGEN_USD || 0.039),
-        modelo: env.GEMINI_MODEL || 'gemini-3.1-flash-lite-image',
+        costo_imagen_usd: proveedorImagenes(env).gratis ? 0 : Number(env.COSTO_IMAGEN_USD || 0.045),
+        modelo: proveedorImagenes(env).modelo,
+        proveedor: proveedorImagenes(env).nombre,
+        gratis: proveedorImagenes(env).gratis,
         formatos: FORMATOS,
       });
     }

@@ -16,18 +16,37 @@
   // Base de datos (tareas, imágenes, ajustes y contraseñas cifradas). Cloudflare la crea sola en el primer despliegue.
   "d1_databases": [{ "binding": "DB", "database_name": "programacion-cursos" }],
 
+  // IA de imágenes de Cloudflare (gratis hasta el límite diario, sin tarjeta).
+  "ai": { "binding": "AI" },
+
   // Los secretos GEMINI_API_KEY, CLAVE_ADMIN y CLAVE_DISENADOR se configuran en el panel
   // de Cloudflare (Worker > Settings > Variables and Secrets), nunca aquí: el repo es público.
   // keep_vars evita que un despliegue las borre. Ver docs/INSTALACION.md.
   "keep_vars": true,
   "vars": {
-    // Modelo de Google Gemini que genera las imágenes. Cámbialo si Google lo retira.
+    // Modelo de imágenes de Cloudflare Workers AI. Cámbialo si Cloudflare lo retira.
+    "IMAGEN_MODELO": "@cf/black-forest-labs/flux-2-klein-4b",
+    // Solo si se agrega el secreto GEMINI_API_KEY (de pago): modelo de Google Gemini.
     "GEMINI_MODEL": "gemini-3.1-flash-lite-image",
-    // Costo aproximado por imagen en dólares, solo para el contador de uso.
+    // Costo aproximado por imagen en dólares con Gemini, solo para el contador de uso.
     "COSTO_IMAGEN_USD": "0.045",
     // Página que abre el botón "Generar link de Zoom" para crear la reunión.
     "ZOOM_URL": "https://zoom.us/meeting#/upcoming"
   },
 
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+
+  // Solo para probar en el computador (npm run dev): igual, pero sin Workers AI, que exige
+  // iniciar sesión en Cloudflare. Con IMAGEN_DE_PRUEBA=1 en .dev.vars sale una imagen gris.
+  "env": {
+    "local": {
+      "d1_databases": [{ "binding": "DB", "database_name": "programacion-cursos-local" }],
+      "vars": {
+        "IMAGEN_MODELO": "@cf/black-forest-labs/flux-2-klein-4b",
+        "GEMINI_MODEL": "gemini-3.1-flash-lite-image",
+        "COSTO_IMAGEN_USD": "0.045",
+        "ZOOM_URL": "https://zoom.us/meeting#/upcoming"
+      }
+    }
+  }
 }

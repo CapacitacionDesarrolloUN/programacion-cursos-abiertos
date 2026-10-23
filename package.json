@@ -5,7 +5,7 @@
   "description": "Programación de cursos abiertos de Capacitación y Desarrollo (Uninorte): registro de cursos e imágenes IA por curso.",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --env local",
     "deploy": "wrangler deploy",
     "check": "node --check src/index.js && node --check public/app.js"
   },

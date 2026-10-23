@@ -7,7 +7,9 @@ export const PROMPT_POR_DEFECTO = `A realistic, natural-looking photograph that 
 
 Style: candid documentary photography, natural light, true-to-life colors, real skin texture and small everyday imperfections, shot on a full-frame camera with a 35mm lens. It must not look artificial, staged, CGI, 3D rendered, illustrated or overly polished.
 
-Strictly no text of any kind: no letters, words, numbers, captions, signs, screens with writing, logos or watermarks.`;
+The image is purely visual and clean: blank surfaces, no signage, no screens showing writing, no logos, no watermarks, no captions, no lettering anywhere.`;
+
+const PROMPT_ANTERIOR_FINAL = 'Strictly no text of any kind: no letters, words, numbers, captions, signs, screens with writing, logos or watermarks.';
 
 const ESQUEMA = [
   `CREATE TABLE IF NOT EXISTS cursos (
@@ -77,6 +79,11 @@ export async function prepararBase(db, env) {
   await db
     .prepare(`INSERT OR IGNORE INTO ajustes (clave, valor) VALUES ('prompt', ?)`)
     .bind(PROMPT_POR_DEFECTO)
+    .run();
+  // Si la instrucción guardada es la original de la primera versión, se actualiza a la nueva.
+  await db
+    .prepare(`UPDATE ajustes SET valor = ? WHERE clave = 'prompt' AND valor = ?`)
+    .bind(PROMPT_POR_DEFECTO, PROMPT_POR_DEFECTO.replace(/The image is purely visual[^`]*$/, PROMPT_ANTERIOR_FINAL))
     .run();
   await prepararSesiones(db, env);
   listo = true;

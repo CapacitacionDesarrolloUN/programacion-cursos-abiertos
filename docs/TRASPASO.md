@@ -8,8 +8,7 @@ Esta guía es para cuando cambia el administrador (quien programa los cursos) o 
 |---|---|---|
 | Dirección de la app | <https://programacion-cursos-abiertos.capacitacion-acb.workers.dev> | Cualquiera con el link (pide contraseña) |
 | Contraseñas de administrador y diseñador | App → **Ajustes → Contraseñas** | Quien ocupa cada cargo |
-| Cuenta de Cloudflare (hosting, base de datos e imágenes) | <https://dash.cloudflare.com> | _(completar: correo dueño)_ |
-| Cuenta de Google AI Studio y su facturación (imágenes) | <https://aistudio.google.com> y Google Cloud Billing | _(completar: correo dueño)_ |
+| Cuenta de Cloudflare (hosting, base de datos e IA de imágenes) | <https://dash.cloudflare.com> | _(completar: correo dueño)_ |
 | Repositorio del código | GitHub → `CapacitacionDesarrolloUN/programacion-cursos-abiertos` | Organización `CapacitacionDesarrolloUN` |
 
 Mantén esta tabla al día. Edítala desde GitHub con el lápiz ✏️.
@@ -27,7 +26,7 @@ Hazlo **antes del último día** de quien se va:
 
 1. **App:** en **Ajustes → Contraseñas**, cambia la de *Administrador* y entrégasela a quien llega. Quien llega entra y comprueba que ve las pestañas Programar tareas, Vista diseñador y Ajustes.
 2. **Cloudflare:** en **Manage Account → Members**, invita a quien llega como *Super Administrator*. Cuando acepte, quita al anterior. Si la cuenta usa un buzón compartido del área, basta con entregar ese acceso.
-3. **Google AI Studio / Google Cloud:** en <https://console.cloud.google.com/iam-admin/iam>, en el proyecto de la llave, agrega a quien llega como *Owner*. En **Billing → Account management**, agrégalo como *Billing Account Administrator*. Después quita al anterior. Si la tarjeta registrada era personal, cámbiala por la institucional.
+3. **Google (solo si se activó Gemini, que es opcional):** en <https://console.cloud.google.com/iam-admin/iam> agrega a quien llega como *Owner* del proyecto de la llave y como administrador de facturación. Después quita al anterior.
 4. **GitHub:** pide a un dueño de la organización `CapacitacionDesarrolloUN` que agregue a quien llega. Si quien se va era el único dueño, primero debe hacer dueño a quien llega.
 5. Actualiza la tabla de arriba.
 

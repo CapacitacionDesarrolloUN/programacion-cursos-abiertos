@@ -11,7 +11,7 @@ Tiene dos caras, y se entra a cada una con su propia contraseña:
 
 | Documento | Para qué |
 |---|---|
-| [docs/INSTALACION.md](docs/INSTALACION.md) | Poner la app en línea por primera vez (Cloudflare y Google AI Studio). |
+| [docs/INSTALACION.md](docs/INSTALACION.md) | Poner la app en línea por primera vez (solo Cloudflare, sin tarjeta). |
 | [docs/TRASPASO.md](docs/TRASPASO.md) | Qué hacer cuando cambia la persona responsable. **Léelo si acabas de heredar la app.** |
 | [docs/MANTENIMIENTO.md](docs/MANTENIMIENTO.md) | Cambios frecuentes: modelo de IA, costos, problemas comunes. |
 
@@ -21,7 +21,7 @@ Tiene dos caras, y se entra a cada una con su propia contraseña:
 - **Cloudflare D1** es la base de datos (tareas, imágenes, ajustes y contraseñas cifradas). Las tablas y columnas nuevas se crean solas. No se usa R2, para que la cuenta de Cloudflare no pida tarjeta.
 - Las imágenes se comprimen a JPEG en el navegador antes de guardarse (máximo 1600 px y unos 1,3 MB), porque D1 acepta hasta 2 MB por registro.
 - **Ingreso con contraseña:** hay una para el administrador y otra para el diseñador. Se guardan cifradas, se pueden cambiar desde **Ajustes** y la app bloquea la entrada por 15 minutos después de 8 intentos fallidos.
-- **Google Gemini** ("Nano Banana", modelo `gemini-3.1-flash-lite-image`) genera las imágenes, a unos US$0,04 a US$0,07 por imagen.
+- **Cloudflare Workers AI** (modelo FLUX.2 `@cf/black-forest-labs/flux-2-klein-4b`) genera las imágenes **gratis**, sin tarjeta ni llave, hasta el cupo diario de la cuenta (unas 90 imágenes al día; se renueva a las 7:00 p. m., hora de Colombia). Opcionalmente puede usarse Google Gemini, que es de pago (ver docs/INSTALACION.md).
 - La interfaz (`public/`) es HTML, CSS y JavaScript sin frameworks ni compilación, para que no se desactualice con los años.
 
 Cada cambio que llega a la rama `main` en GitHub se publica solo en Cloudflare.
@@ -31,7 +31,7 @@ Cada cambio que llega a la rama `main` en GitHub se publica solo en Cloudflare.
 ```bash
 npm install
 cp .dev.vars.example .dev.vars   # contraseñas de prueba
-npm run dev                      # abre http://localhost:8787
+npm run dev                      # abre http://localhost:8787 (sin Workers AI)
 ```
 
 Con `IMAGEN_DE_PRUEBA=1` y sin `GEMINI_API_KEY`, la app genera una imagen gris de prueba y no gasta créditos.

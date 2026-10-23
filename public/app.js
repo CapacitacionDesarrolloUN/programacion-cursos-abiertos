@@ -708,8 +708,10 @@ async function vistaAjustes() {
 
     <section class="panel resumen">
       <div><span class="cifra">${datos.imagenes_mes}</span><span class="sutil">imágenes generadas este mes</span></div>
-      <div><span class="cifra">US$ ${costo}</span><span class="sutil">costo aproximado del mes</span></div>
-      <div><span class="cifra pequena">${esc(datos.modelo)}</span><span class="sutil">modelo de Google Gemini</span></div>
+      ${datos.gratis
+    ? '<div><span class="cifra">Gratis</span><span class="sutil">unas 90 imágenes al día; el cupo se renueva a las 7:00 p. m.</span></div>'
+    : `<div><span class="cifra">US$ ${costo}</span><span class="sutil">costo aproximado del mes</span></div>`}
+      <div><span class="cifra pequena">${esc(datos.modelo)}</span><span class="sutil">${esc(datos.proveedor)}</span></div>
     </section>
 
     <section class="panel">

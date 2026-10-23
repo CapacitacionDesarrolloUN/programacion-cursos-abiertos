@@ -1,12 +1,12 @@
 # Instalación (una sola vez)
 
-Toma unos 20 minutos. Necesitas acceso a la organización de GitHub `CapacitacionDesarrolloUN`, un correo institucional y las dos contraseñas que vas a usar (administrador y diseñador).
+Toma unos 15 minutos y **no pide tarjeta**. Necesitas acceso a la organización de GitHub `CapacitacionDesarrolloUN`, un correo institucional y las dos contraseñas que vas a usar (administrador y diseñador).
 
-> **Importante para el traspaso:** crea las cuentas de Cloudflare y de Google con un **correo institucional del área** (ideal: un buzón compartido de Capacitación), no con un correo personal. Si eso no es posible, usa tu correo institucional y agrega a un segundo miembro del área en cada cuenta (ver [TRASPASO.md](TRASPASO.md)).
+> **Importante para el traspaso:** crea la cuenta de Cloudflare con un **correo institucional del área** (ideal: un buzón compartido de Capacitación), no con un correo personal. Si eso no es posible, usa tu correo institucional y agrega a un segundo miembro del área en la cuenta (ver [TRASPASO.md](TRASPASO.md)).
 
 ## 1. Cloudflare: publicar la app
 
-El plan gratuito de Cloudflare alcanza para esta app y **no pide tarjeta**. La app no usa R2, que es el servicio de Cloudflare que sí la pide: las imágenes se guardan comprimidas en la base de datos.
+El plan gratuito de Cloudflare alcanza para esta app y **no pide tarjeta**. Las imágenes las genera la IA de Cloudflare (Workers AI), que es gratis hasta unas 90 imágenes al día. La app no usa R2, que es el servicio de Cloudflare que sí pide tarjeta: las imágenes se guardan comprimidas en la base de datos.
 
 1. Crea una cuenta en <https://dash.cloudflare.com/sign-up>.
 2. Ve a **Compute → Workers & Pages → Create → Import a repository**.
@@ -17,30 +17,29 @@ En el primer despliegue Cloudflare crea sola la base de datos `programacion-curs
 
 Si el despliegue falla porque no pudo crear la base de datos, créala a mano en **Storage & Databases → D1** con el nombre `programacion-cursos`. Después copia su **Database ID** en `wrangler.jsonc`, dentro de `d1_databases`, como `"database_id": "..."`, y vuelve a desplegar.
 
-## 2. Google Gemini: generación de imágenes
+## 2. Contraseñas
 
-1. Entra a <https://aistudio.google.com/apikey> con la cuenta institucional y crea una llave (**Create API key**).
-2. Activa la facturación del proyecto (**Set up billing**). Aquí sí se necesita un medio de pago: Google no incluye la generación de imágenes por API en su nivel gratuito. El costo es de unos US$0,04 a US$0,07 por imagen. Como referencia, 80 imágenes al mes cuestan entre US$3 y US$6. Si es posible, usa una tarjeta institucional del área.
-3. Recomendado: en Google Cloud Billing, crea un **presupuesto con alerta** de US$10 al mes para enterarte de cualquier uso fuera de lo normal.
-
-## 3. Contraseñas y llave
-
-En el Worker: **Settings → Variables and Secrets → Add**. Agrega los tres como tipo **Secret**:
+En el Worker: **Settings → Variables and Secrets → Add**. Agrega las dos como tipo **Secret**, no como *Variable*:
 
 | Nombre | Valor |
 |---|---|
-| `GEMINI_API_KEY` | La llave de Google AI Studio |
 | `CLAVE_ADMIN` | Contraseña inicial del administrador |
 | `CLAVE_DISENADOR` | Contraseña inicial del diseñador |
+
+Si Cloudflare muestra un aviso amarillo que propone copiar valores a `wrangler.jsonc`, ciérralo y no lo sigas.
 
 Guarda los cambios (**Deploy**). Las contraseñas **nunca** se escriben en el código, porque el repositorio es público.
 
 Las dos contraseñas solo se leen de aquí la primera vez. Después viven cifradas en la base de datos y se cambian desde la app, en **Ajustes → Contraseñas**. Por eso, cambiar estos secretos más adelante no tiene efecto; para recuperar el acceso, ver [MANTENIMIENTO.md](MANTENIMIENTO.md).
 
-## 4. Primer uso
+## 3. Primer uso
 
 1. Abre la dirección `workers.dev` y entra con la contraseña de administrador.
 2. Con **+ Programar tarea**, crea una tarea de prueba.
-3. Sal, entra con la contraseña de diseñador y genera la imagen de esa tarea para confirmar que la llave de Google funciona.
+3. Sal, entra con la contraseña de diseñador y genera la imagen de esa tarea.
 
 Listo. Guarda la dirección de la app en favoritos y compártela con el diseñador junto con su contraseña.
+
+## Opcional: imágenes con Google Gemini (de pago)
+
+Si algún día se quiere otra calidad de imagen y el área acepta pagar (unos US$0,04 a US$0,07 por imagen, con tarjeta), crea una llave en <https://aistudio.google.com/apikey>, activa la facturación y agrégala en el Worker como secreto `GEMINI_API_KEY`. La app la usa automáticamente en lugar de Workers AI. Si borras el secreto, vuelve a Workers AI, que es gratis.

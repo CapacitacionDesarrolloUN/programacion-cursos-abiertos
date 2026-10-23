@@ -2,11 +2,15 @@
 
 La app casi no necesita mantenimiento. Estos son los casos que pueden aparecer con los años.
 
-## Google retira el modelo de imágenes
+## "Se acabó el cupo gratis de imágenes de hoy"
 
-**Síntoma:** al generar aparece un error de Google Gemini que habla de un modelo no encontrado o retirado.
+Workers AI da gratis 10.000 "neuronas" al día, que alcanzan para unas 90 imágenes. El cupo se renueva todos los días a las 7:00 p. m. (hora de Colombia). Si ese límite se queda corto, hay dos opciones de pago: activar **Workers Paid** en Cloudflare (US$5 al mes) o usar Google Gemini (ver el final de INSTALACION.md).
 
-**Solución:** busca el modelo de imágenes vigente en <https://ai.google.dev/gemini-api/docs/models>. Después, en GitHub, edita `wrangler.jsonc` y cambia `GEMINI_MODEL` por el nombre nuevo. Al guardar en `main`, la app se publica sola en uno o dos minutos. Si el modelo nuevo tiene otro precio, actualiza también `COSTO_IMAGEN_USD`.
+## Cloudflare retira el modelo de imágenes
+
+**Síntoma:** al generar aparece un error de Workers AI que dice que el modelo no existe.
+
+**Solución:** busca un modelo de texto a imagen vigente en <https://developers.cloudflare.com/workers-ai/models/>. Después, en GitHub, edita `wrangler.jsonc` y cambia `IMAGEN_MODELO` (en los dos lugares donde aparece). Al guardar en `main`, la app se publica sola en uno o dos minutos. Si el modelo nuevo no usa formulario multipart como FLUX.2, hay que ajustar `src/imagen.js`.
 
 ## Las imágenes no salen como se quiere
 
@@ -22,12 +26,8 @@ Cada imagen ocupa cerca de 1 MB en D1, y el plan gratuito incluye 5 GB: alcanza 
 
 ## Revisar el gasto
 
-- En la app: **Ajustes** muestra cuántas imágenes se generaron en el mes y su costo aproximado.
-- El gasto real está en Google Cloud Billing, en la cuenta asociada a la llave.
-
-## Error "exceeded CPU" o la app responde lento
-
-El plan gratuito de Cloudflare Workers limita el tiempo de procesamiento por petición. Si al generar imágenes aparece ese error de forma repetida, activa **Workers Paid** (US$5 al mes) en Cloudflare → Workers & Pages → Plans.
+- En la app: **Ajustes** muestra cuántas imágenes se generaron en el mes. Con Workers AI el costo es cero.
+- Solo si se activó Google Gemini: el gasto real está en Google Cloud Billing.
 
 ## Olvidé la contraseña
 
@@ -39,9 +39,11 @@ El plan gratuito de Cloudflare Workers limita el tiempo de procesamiento por pet
    (o `'clave_disenador'` para la del diseñador).
 3. Abre la app. En ese momento toma la contraseña del secreto. Ya puedes entrar y, si quieres, cambiarla desde **Ajustes**.
 
-## Cambiar la llave de Google
+## Si se usa Google Gemini (opcional, de pago)
 
-Crea una llave nueva en <https://aistudio.google.com/apikey>. Después, en Cloudflare → Worker → **Settings → Variables and Secrets**, edita `GEMINI_API_KEY` y despliega. Por último, borra la llave anterior en AI Studio.
+- **Cambiar la llave:** crea una nueva en <https://aistudio.google.com/apikey>, edita el secreto `GEMINI_API_KEY` en el Worker y borra la anterior en AI Studio.
+- **Google retira el modelo:** busca el vigente en <https://ai.google.dev/gemini-api/docs/models> y cambia `GEMINI_MODEL` en `wrangler.jsonc`.
+- **Volver a lo gratis:** borra el secreto `GEMINI_API_KEY`.
 
 ## Ver errores
 
