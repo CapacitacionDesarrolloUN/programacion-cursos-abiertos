@@ -64,6 +64,9 @@ const COLUMNAS_NUEVAS = {
     // Horas en formato 24 h ("14:00"), como en la agenda de Capacitación.
     hora_inicio: 'TEXT',
     hora_fin: 'TEXT',
+    // Notas del administrador para el diseñador. obs_ok = 1 cuando el diseñador las marca como realizadas.
+    observaciones: "TEXT NOT NULL DEFAULT ''",
+    obs_ok: 'INTEGER NOT NULL DEFAULT 0',
   },
 };
 

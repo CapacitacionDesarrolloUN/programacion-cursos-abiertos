@@ -59,4 +59,8 @@ Si el nombre de un curso menciona una marca conocida (Excel, Power BI, Python, C
 
 ## Horas de las tareas
 
-Hora inicio y hora fin se escriben a mano como en la agenda de Capacitación: «200», «2:00», «230» o «14:00». AM/PM se elige solo (de 7:00 a 11:59 es a.m.; de 12:00 a 6:59, p.m.) y se puede cambiar con los botones. Al pegar desde Excel, las columnas van en este orden: Actividad, Fecha, Hora inicio, Hora fin, Link del curso, Link de Zoom y Fecha del boletín.
+Hora inicio y hora fin se escriben a mano como en la agenda de Capacitación: «200», «2:00», «230» o «14:00». AM/PM se elige solo (de 7:00 a 11:59 es a.m.; de 12:00 a 6:59, p.m.) y se puede cambiar con los botones. Al pegar desde Excel, las columnas van en este orden: Actividad, Fecha, Hora inicio, Hora fin, Link del curso, Link de Zoom, Fecha del boletín y Observaciones (opcional).
+
+## Observaciones
+
+Funcionan igual que en la agenda: el administrador las escribe al programar o editar una tarea, el diseñador las ve en un recuadro rojo con una bandera «!» y las marca como *Realizado*. Si el administrador cambia el texto, vuelven a quedar pendientes. En la lista del administrador se ve si cada observación está pendiente o atendida.

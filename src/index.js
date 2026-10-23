@@ -48,6 +48,7 @@ function validarCurso(datos) {
   const fechaBoletin = String(datos.fecha_boletin || '').trim();
   const horaInicio = String(datos.hora_inicio || '').trim();
   const horaFin = String(datos.hora_fin || '').trim();
+  const observaciones = String(datos.observaciones || '').trim().slice(0, 1000);
   if (!nombre) throw new ErrorHttp(400, 'La actividad necesita un nombre.');
   for (const hora of [horaInicio, horaFin]) {
     if (hora && !HORA.test(hora)) throw new ErrorHttp(400, `La hora de "${nombre}" no es válida. Escríbela así: 2:00 o 14:00.`);
@@ -64,7 +65,7 @@ function validarCurso(datos) {
       throw new ErrorHttp(400, `El link ${cual} de "${nombre}" debe empezar por http:// o https://`);
     }
   }
-  return { nombre, fecha, link, linkZoom, fechaBoletin: fechaBoletin || null, horaInicio: horaInicio || null, horaFin: horaFin || null };
+  return { nombre, fecha, link, linkZoom, fechaBoletin: fechaBoletin || null, horaInicio: horaInicio || null, horaFin: horaFin || null, observaciones };
 }
 
 function cursoPublico(fila) {
@@ -74,6 +75,8 @@ function cursoPublico(fila) {
     fecha: fila.fecha,
     hora_inicio: fila.hora_inicio || '',
     hora_fin: fila.hora_fin || '',
+    observaciones: fila.observaciones || '',
+    obs_ok: fila.obs_ok === 1,
     link: fila.link,
     link_zoom: fila.link_zoom || '',
     fecha_boletin: fila.fecha_boletin,
@@ -155,9 +158,10 @@ async function rutas(request, env, usuario, partes) {
       soloAdmin(usuario);
       const curso = validarCurso(await leerJson(request));
       const fila = await env.DB
-        .prepare(`INSERT INTO cursos (nombre, fecha, hora_inicio, hora_fin, link, link_zoom, fecha_boletin, creado_por)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
-        .bind(curso.nombre, curso.fecha, curso.horaInicio, curso.horaFin, curso.link, curso.linkZoom, curso.fechaBoletin, usuario.rol)
+        .prepare(`INSERT INTO cursos (nombre, fecha, hora_inicio, hora_fin, link, link_zoom, fecha_boletin, observaciones, creado_por)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+        .bind(curso.nombre, curso.fecha, curso.horaInicio, curso.horaFin, curso.link, curso.linkZoom, curso.fechaBoletin,
+          curso.observaciones, usuario.rol)
         .first();
       return json(cursoPublico(fila), 201);
     }
@@ -169,9 +173,9 @@ async function rutas(request, env, usuario, partes) {
       if (filas.length > 200) throw new ErrorHttp(400, 'Importa máximo 200 tareas a la vez.');
       const cursos = filas.map(validarCurso);
       await env.DB.batch(cursos.map((c) => env.DB
-        .prepare(`INSERT INTO cursos (nombre, fecha, hora_inicio, hora_fin, link, link_zoom, fecha_boletin, creado_por)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(c.nombre, c.fecha, c.horaInicio, c.horaFin, c.link, c.linkZoom, c.fechaBoletin, usuario.rol)));
+        .prepare(`INSERT INTO cursos (nombre, fecha, hora_inicio, hora_fin, link, link_zoom, fecha_boletin, observaciones, creado_por)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(c.nombre, c.fecha, c.horaInicio, c.horaFin, c.link, c.linkZoom, c.fechaBoletin, c.observaciones, usuario.rol)));
       return json({ importados: cursos.length }, 201);
     }
 
@@ -191,8 +195,11 @@ async function rutas(request, env, usuario, partes) {
       const curso = validarCurso(await leerJson(request));
       const fila = await env.DB
         .prepare(`UPDATE cursos SET nombre = ?, fecha = ?, hora_inicio = ?, hora_fin = ?, link = ?, link_zoom = ?,
-                  fecha_boletin = ?, actualizado_en = datetime('now') WHERE id = ? RETURNING *`)
-        .bind(curso.nombre, curso.fecha, curso.horaInicio, curso.horaFin, curso.link, curso.linkZoom, curso.fechaBoletin, cursoId)
+                  fecha_boletin = ?, observaciones = ?,
+                  obs_ok = CASE WHEN observaciones = ? THEN obs_ok ELSE 0 END,
+                  actualizado_en = datetime('now') WHERE id = ? RETURNING *`)
+        .bind(curso.nombre, curso.fecha, curso.horaInicio, curso.horaFin, curso.link, curso.linkZoom, curso.fechaBoletin,
+          curso.observaciones, curso.observaciones, cursoId)
         .first();
       return json(cursoPublico(fila));
     }
@@ -208,6 +215,15 @@ async function rutas(request, env, usuario, partes) {
                   WHERE id = ? RETURNING *`)
         .bind(estado, estado, estado, usuario.rol, cursoId)
         .first();
+      return json(cursoPublico(fila));
+    }
+
+    // El diseñador marca las observaciones como realizadas (o las reabre), como en la agenda.
+    if (sub === 'observaciones' && metodo === 'PUT') {
+      await buscarCurso(env, cursoId);
+      const { ok } = await leerJson(request);
+      const fila = await env.DB.prepare('UPDATE cursos SET obs_ok = ? WHERE id = ? RETURNING *')
+        .bind(ok ? 1 : 0, cursoId).first();
       return json(cursoPublico(fila));
     }
 

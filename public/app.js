@@ -198,6 +198,8 @@ const fmtH = (v) => {
   const [h, m] = v.split(':').map(Number);
   return `${h % 12 || 12}:${dos(m)} ${h < 12 ? 'a.m.' : 'p.m.'}`;
 };
+const obsPendiente = (c) => Boolean(c.observaciones.trim()) && !c.obs_ok;
+const bandera = '<span class="obs-bandera" title="Tiene observaciones pendientes" aria-label="Tiene observaciones pendientes">!</span>';
 const horario = (c) => (c.hora_inicio ? `${fmtH(c.hora_inicio)} – ${fmtH(c.hora_fin)}` : '');
 
 function parseHora(txt) {
@@ -665,9 +667,15 @@ function tarjetaCurso(c, formato, i) {
       <div class="cuerpo">
         ${plazoBoletin(c)}
         <div class="titulo-tarjeta">
-          <h2>${esc(c.nombre)}</h2>
+          <h2>${obsPendiente(c) ? bandera : ''}${esc(c.nombre)}</h2>
           <button type="button" class="copiar" data-copiar="nombre" title="Copiar nombre" aria-label="Copiar nombre">${icono('copiar', 'i-copiar')}${icono('check', 'i-check')}</button>
         </div>
+        ${c.observaciones.trim() ? `
+        <div class="obs ${c.obs_ok ? 'ok' : ''}">
+          <small>${c.obs_ok ? `${icono('check')} Observación atendida` : `${icono('campana')} Observaciones de ${esc(estado.yo.rol === 'admin' ? estado.yo.nombre : estado.yo.otro)}`}</small>
+          <p>${esc(c.observaciones)}</p>
+          <button type="button" data-accion="obs">${c.obs_ok ? 'Reabrir' : `${icono('check')} Realizado`}</button>
+        </div>` : ''}
         ${campoCopiable('Fecha', esc(fechaLarga(c.fecha)), 'fecha', true, 'calendario')}
         ${campoCopiable('Horario', esc(horario(c)), 'horario', Boolean(c.hora_inicio), 'reloj')}
         ${campoCopiable('Link del curso', c.link ? enlace(c.link) : '', 'link', Boolean(c.link), 'enlace')}
@@ -724,6 +732,17 @@ $app.addEventListener('click', async (ev) => {
   const boton = ev.target.closest('[data-accion]');
   const accion = boton?.dataset.accion;
   if (accion === 'copiar-todo') copiar(textoCompleto(curso), 'Información de la actividad', boton);
+
+  if (accion === 'obs') {
+    try {
+      const actualizado = await api(`cursos/${curso.id}/observaciones`, { method: 'PUT', body: { ok: !curso.obs_ok } });
+      Object.assign(curso, actualizado);
+      avisar(curso.obs_ok ? 'Observación marcada como realizada' : 'Observación pendiente otra vez');
+      pintarCursos();
+    } catch (e) {
+      avisar(e.message, 'error');
+    }
+  }
 
   if (accion === 'lista' || accion === 'reabrir') {
     try {
@@ -787,8 +806,9 @@ function filaTarea(c, i) {
         <span class="dia-mes">${esc(f.mes)}</span>
       </div>
       <div class="fila-principal">
-        <strong>${esc(c.nombre)}</strong>
+        <strong>${obsPendiente(c) ? bandera : ''}${esc(c.nombre)}</strong>
         <span class="meta">
+          ${c.observaciones.trim() ? `<span class="${c.obs_ok ? 'obs-meta-ok' : 'obs-meta'}" title="${esc(c.observaciones)}">${icono(c.obs_ok ? 'check' : 'campana')}${c.obs_ok ? 'Observación atendida' : 'Observación pendiente'}</span>` : ''}
           ${c.hora_inicio ? `<span>${icono('reloj')}${esc(horario(c))}</span>` : ''}
           ${c.link ? `<a href="${esc(c.link)}" target="_blank" rel="noopener">${icono('enlace')}Curso</a>` : ''}
           ${c.link_zoom ? `<a href="${esc(c.link_zoom)}" target="_blank" rel="noopener">${icono('video')}Zoom</a>` : ''}
@@ -971,6 +991,10 @@ function abrirTarea(curso) {
         </span>
         <small class="sutil">Zoom se abre en otra pestaña: crea la reunión, copia su link y pégalo aquí.</small>
       </label>
+      <label><span>Observaciones <span class="opcional">(opcional)</span></span>
+        <textarea name="observaciones" rows="3" maxlength="1000" placeholder="Ej.: usar fotos con personas de la región, evitar tonos fríos">${esc(curso?.observaciones)}</textarea>
+        <small class="sutil">${esc(estado.yo.otro)} las ve en la tarea y las marca como realizadas. Si las cambias, vuelven a quedar pendientes.</small>
+      </label>
       <p class="error-form" role="alert" hidden></p>
       <div class="botones">
         <button type="submit" class="primario">${curso ? 'Guardar cambios' : 'Programar tarea'}</button>
@@ -1035,8 +1059,8 @@ function abrirImportar() {
         </div>
         <button type="button" class="cerrar" data-cerrar aria-label="Cerrar">×</button>
       </header>
-      <p class="sutil">Copia en Excel estas columnas, en este orden, y pégalas aquí: <strong>Actividad</strong>, <strong>Fecha</strong>, <strong>Hora inicio</strong>, <strong>Hora fin</strong>, <strong>Link del curso</strong>, <strong>Link de Zoom</strong> y <strong>Fecha del boletín</strong>. Las fechas pueden ir como 05/11/2026 y las horas como 2:00 p. m. o 14:00. Los links son opcionales.</p>
-      <textarea id="pegado" rows="7" placeholder="Actividad	Fecha	Hora inicio	Hora fin	Link del curso	Link de Zoom	Fecha del boletín"></textarea>
+      <p class="sutil">Copia en Excel estas columnas, en este orden, y pégalas aquí: <strong>Actividad</strong>, <strong>Fecha</strong>, <strong>Hora inicio</strong>, <strong>Hora fin</strong>, <strong>Link del curso</strong>, <strong>Link de Zoom</strong>, <strong>Fecha del boletín</strong> y, si quieres, <strong>Observaciones</strong>. Las fechas pueden ir como 05/11/2026 y las horas como 2:00 p. m. o 14:00. Los links son opcionales.</p>
+      <textarea id="pegado" rows="7" placeholder="Actividad	Fecha	Hora inicio	Hora fin	Link del curso	Link de Zoom	Fecha del boletín	Observaciones"></textarea>
       <div id="vista-previa"></div>
       <div class="botones">
         <button type="button" class="primario" id="importar" disabled>Importar</button>
@@ -1054,7 +1078,7 @@ function abrirImportar() {
     filasPegadas = $pegado.value.split(/\r?\n/)
       .map((l) => l.split('\t').map((x) => x.trim()))
       .filter((cols) => cols[0] && !/^(nombre|actividad)$/i.test(cols[0]))
-      .map(([nombre, fecha, inicio, fin, link, linkZoom, boletin]) => ({
+      .map(([nombre, fecha, inicio, fin, link, linkZoom, boletin, observaciones]) => ({
         nombre,
         fecha: normalizarFecha(fecha),
         hora_inicio: horaDeExcel(inicio),
@@ -1062,6 +1086,7 @@ function abrirImportar() {
         link: link || '',
         link_zoom: linkZoom || '',
         fecha_boletin: boletin ? normalizarFecha(boletin) : '',
+        observaciones: observaciones || '',
       }));
     const iso = /^\d{4}-\d{2}-\d{2}$/;
     const malas = filasPegadas.filter((f) => !iso.test(f.fecha) || (f.fecha_boletin && !iso.test(f.fecha_boletin))

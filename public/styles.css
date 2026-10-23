@@ -527,6 +527,32 @@ a.enlace { display: inline-flex; align-items: center; gap: 6px; text-decoration:
 .boton.zoom:hover { background: #0848C8; }
 .error-form { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--peligro-fondo); color: var(--peligro); font-weight: 600; font-size: .9rem; animation: sacudir .35s; }
 
+.form-dialogo textarea { font-family: var(--f-texto); font-size: .95rem; }
+.opcional { font-weight: 600; opacity: .7; letter-spacing: 0; }
+
+/* Observaciones, como en la agenda: bandera "!" que late mientras están pendientes */
+.obs-bandera {
+  display: inline-grid; place-items: center; width: 19px; height: 19px; margin-right: 7px; vertical-align: 2px;
+  border-radius: 50%; background: var(--rojo); color: #fff; font-size: .75rem; font-weight: 900; line-height: 1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rojo) 22%, transparent); animation: latido 2s ease-in-out infinite;
+}
+.obs {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: start;
+  padding: 11px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--rojo) 7%, var(--superficie)); border: 1px solid color-mix(in srgb, var(--rojo) 28%, transparent);
+}
+.obs small { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--rojo); }
+.obs small .ico { width: 14px; height: 14px; }
+.obs p { margin: 0; font-size: .92rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.obs button { padding: 5px 12px; font-size: .78rem; background: var(--ok); color: #fff; border: 0; white-space: nowrap; }
+.obs button .ico { width: 14px; height: 14px; }
+.obs.ok { background: color-mix(in srgb, var(--ok) 7%, var(--superficie)); border-color: color-mix(in srgb, var(--ok) 28%, transparent); }
+.obs.ok small { color: var(--ok); }
+.obs.ok p { color: var(--texto-suave); }
+.obs.ok button { background: none; color: var(--texto-suave); border: 1px solid var(--borde); }
+.meta .obs-meta { color: var(--rojo); font-weight: 700; }
+.meta .obs-meta-ok { color: var(--ok); font-weight: 600; }
+
 /* Horas con AM/PM, como en la agenda */
 .hora { display: flex; gap: 6px; min-width: 0; }
 .hora input { flex: 1; font-variant-numeric: tabular-nums; }
