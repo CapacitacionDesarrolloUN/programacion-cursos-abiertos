@@ -64,3 +64,7 @@ Hora inicio y hora fin se escriben a mano como en la agenda de Capacitación: «
 ## Observaciones
 
 Funcionan igual que en la agenda: el administrador las escribe al programar o editar una tarea, el diseñador las ve en un recuadro rojo con una bandera «!» y las marca como *Realizado*. Si el administrador cambia el texto, vuelven a quedar pendientes. En la lista del administrador se ve si cada observación está pendiente o atendida.
+
+## Tareas que llegan desde la agenda
+
+El botón **Añadir a cursos abiertos** de la agenda crea la tarea aquí sin pedir código, igual que la agenda deja editar sin login. Para que ninguna otra página pueda hacerlo, la app solo acepta esas tareas desde la dirección de la agenda, que está en `AGENDA_ORIGEN` dentro de `wrangler.jsonc` (hoy `https://capacitaciondesarrolloun.github.io`). Si la agenda se muda de dirección y el botón dice «Solo la agenda puede enviar tareas por aquí», cambia ese valor desde GitHub con el lápiz ✏️.

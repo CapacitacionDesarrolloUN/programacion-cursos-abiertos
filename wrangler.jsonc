@@ -31,7 +31,10 @@
     // Imágenes gratis por día (aprox.) con Workers AI. Solo sirve para el contador "quedan hoy".
     "IMAGENES_DIA": "90",
     // Página que abre el botón "Generar link de Zoom" para crear la reunión.
-    "ZOOM_URL": "https://zoom.us/meeting#/upcoming"
+    "ZOOM_URL": "https://zoom.us/meeting#/upcoming",
+    // Dirección de la agenda, la única que puede crear tareas con "Añadir a cursos abiertos".
+    // Si la agenda se muda, cámbiala aquí (sin / al final; varias se separan con comas).
+    "AGENDA_ORIGEN": "https://capacitaciondesarrolloun.github.io"
   },
 
   "observability": { "enabled": true },
@@ -45,7 +48,8 @@
         "IMAGEN_MODELO": "@cf/black-forest-labs/flux-2-klein-4b",
         "GEMINI_MODEL": "gemini-3.1-flash-lite-image",
         "IMAGENES_DIA": "90",
-        "ZOOM_URL": "https://zoom.us/meeting#/upcoming"
+        "ZOOM_URL": "https://zoom.us/meeting#/upcoming",
+        "AGENDA_ORIGEN": "http://localhost:8090"
       }
     }
   }

@@ -67,6 +67,8 @@ const COLUMNAS_NUEVAS = {
     // Notas del administrador para el diseñador. obs_ok = 1 cuando el diseñador las marca como realizadas.
     observaciones: "TEXT NOT NULL DEFAULT ''",
     obs_ok: 'INTEGER NOT NULL DEFAULT 0',
+    // id de la tarea en la agenda (Supabase) cuando llegó con el botón "Añadir a cursos abiertos".
+    agenda_id: 'TEXT',
   },
 };
 
