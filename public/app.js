@@ -402,11 +402,48 @@ async function iniciar() {
   });
   addEventListener('resize', moverIndicador);
   const guardada = leerPreferencias().vista;
-  irA(vistas.some(([id]) => id === guardada) ? guardada : vistas[0][0]);
+  const borrador = tomarBorradorAgenda();
+  if (borrador && esAdmin) {
+    irA('programar').then(() => abrirTarea(null, borrador));
+  } else {
+    if (borrador) avisar('Las tareas de la agenda solo las puede programar el administrador.', 'error');
+    irA(vistas.some(([id]) => id === guardada) ? guardada : vistas[0][0]);
+  }
   if (esAdmin) {
     revisarAvisos();
     setInterval(revisarAvisos, 60000);
   }
+}
+
+// ---------- Tareas que llegan desde la agenda ----------
+// La agenda abre esta app con #agenda?nombre=…&fecha=… El borrador se guarda en la sesión del
+// navegador para que sobreviva al ingreso con código (que recarga la página).
+const BORRADOR_AGENDA = 'cursos-abiertos:borrador-agenda';
+const CAMPOS_AGENDA = ['nombre', 'fecha', 'hora_inicio', 'hora_fin', 'link', 'link_zoom', 'observaciones'];
+
+function guardarBorradorAgenda() {
+  if (!location.hash.startsWith('#agenda?')) return;
+  const params = new URLSearchParams(location.hash.slice('#agenda?'.length));
+  const borrador = Object.fromEntries(CAMPOS_AGENDA.map((c) => [c, params.get(c) || '']));
+  history.replaceState(null, '', location.pathname + location.search);
+  if (!borrador.nombre) return;
+  try {
+    sessionStorage.setItem(BORRADOR_AGENDA, JSON.stringify(borrador));
+  } catch {
+    estado.borradorAgenda = borrador;
+  }
+}
+
+function tomarBorradorAgenda() {
+  let borrador = estado.borradorAgenda || null;
+  estado.borradorAgenda = null;
+  try {
+    borrador = JSON.parse(sessionStorage.getItem(BORRADOR_AGENDA)) || borrador;
+    sessionStorage.removeItem(BORRADOR_AGENDA);
+  } catch {
+    // Sin almacenamiento de sesión, se usa el borrador en memoria.
+  }
+  return borrador;
 }
 
 function moverIndicador() {
@@ -503,7 +540,7 @@ function irA(vista) {
   guardarPreferencia('vista', vista);
   for (const b of $pestanas.querySelectorAll('button')) b.classList.toggle('activa', b.dataset.vista === vista);
   moverIndicador();
-  ({ programar: vistaProgramar, cursos: vistaCursos, ajustes: vistaAjustes })[vista]();
+  return ({ programar: vistaProgramar, cursos: vistaCursos, ajustes: vistaAjustes })[vista]();
 }
 
 async function cargarCursos() {
@@ -955,46 +992,48 @@ function cerrarDialogo(dialogo) {
   setTimeout(() => { dialogo.classList.remove('cerrando'); dialogo.close(); }, 180);
 }
 
-function abrirTarea(curso) {
+function abrirTarea(curso, borrador = null) {
   const dialogo = document.getElementById('dialogo-tarea');
+  const v = curso || borrador;
   dialogo.innerHTML = `
     <form method="dialog" id="form-tarea" class="form-dialogo" novalidate>
       <header>
         <div>
-          <p class="antetitulo">${curso ? 'Editar' : 'Nueva tarea'}</p>
+          <p class="antetitulo">${curso ? 'Editar' : borrador ? 'Nueva tarea · desde la agenda' : 'Nueva tarea'}</p>
           <h2>${curso ? esc(curso.nombre) : 'Programar tarea'}</h2>
         </div>
         <button type="button" class="cerrar" data-cerrar aria-label="Cerrar">×</button>
       </header>
       <label>Nombre de la actividad
-        <input name="nombre" required maxlength="200" value="${esc(curso?.nombre)}" placeholder="Ej.: Excel intermedio para analistas">
+        <input name="nombre" required maxlength="200" value="${esc(v?.nombre)}" placeholder="Ej.: Excel intermedio para analistas">
       </label>
       <div class="fila-2">
         <label>Fecha de la actividad
-          <input name="fecha" type="date" required value="${esc(curso?.fecha)}">
+          <input name="fecha" type="date" required value="${esc(v?.fecha)}">
         </label>
         <label>Publicación en el boletín
-          <input name="fecha_boletin" type="date" required value="${esc(curso?.fecha_boletin)}">
+          <input name="fecha_boletin" type="date" required value="${esc(v?.fecha_boletin)}">
         </label>
       </div>
       <div class="fila-2">
-        ${campoHora('hora_inicio', 'Hora inicio', curso?.hora_inicio, '200 o 2:00')}
-        ${campoHora('hora_fin', 'Hora fin', curso?.hora_fin, '400 o 4:00')}
+        ${campoHora('hora_inicio', 'Hora inicio', v?.hora_inicio, '200 o 2:00')}
+        ${campoHora('hora_fin', 'Hora fin', v?.hora_fin, '400 o 4:00')}
       </div>
       <label>Link del curso (Brightspace)
-        <input name="link" type="url" value="${esc(curso?.link)}" placeholder="https://…">
+        <input name="link" type="url" value="${esc(v?.link)}" placeholder="https://…">
       </label>
       <label>Link de Zoom
         <span class="con-boton">
-          <input name="link_zoom" type="url" value="${esc(curso?.link_zoom)}" placeholder="Pega aquí el link de la reunión">
+          <input name="link_zoom" type="url" value="${esc(v?.link_zoom)}" placeholder="Pega aquí el link de la reunión">
           <a class="boton zoom" href="${esc(estado.yo.zoom_url)}" target="_blank" rel="noopener">${icono('video')} Generar link de Zoom</a>
         </span>
         <small class="sutil">Zoom se abre en otra pestaña: crea la reunión, copia su link y pégalo aquí.</small>
       </label>
       <label><span>Observaciones <span class="opcional">(opcional)</span></span>
-        <textarea name="observaciones" rows="3" maxlength="1000" placeholder="Ej.: usar fotos con personas de la región, evitar tonos fríos">${esc(curso?.observaciones)}</textarea>
+        <textarea name="observaciones" rows="3" maxlength="1000" placeholder="Ej.: usar fotos con personas de la región, evitar tonos fríos">${esc(v?.observaciones)}</textarea>
         <small class="sutil">${esc(estado.yo.otro)} las ve en la tarea y las marca como realizadas. Si las cambias, vuelven a quedar pendientes.</small>
       </label>
+      ${borrador ? `<p class="sutil pequeno">Se copió de la agenda. Revisa los datos, elige la fecha del boletín y programa la tarea.</p>` : ''}
       <p class="error-form" role="alert" hidden></p>
       <div class="botones">
         <button type="submit" class="primario">${curso ? 'Guardar cambios' : 'Programar tarea'}</button>
@@ -1007,6 +1046,7 @@ function abrirTarea(curso) {
   const form = dialogo.querySelector('form');
   const $error = form.querySelector('.error-form');
   for (const input of form.querySelectorAll('.hora input')) prepararHora(input);
+  if (borrador) form.fecha_boletin.focus();
 
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -1249,4 +1289,5 @@ async function vistaAjustes() {
   });
 }
 
+guardarBorradorAgenda();
 iniciar();
