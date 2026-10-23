@@ -39,7 +39,7 @@ Las dos contraseñas solo se leen de aquí la primera vez. Después viven cifrad
 ## 4. Primer uso
 
 1. Abre la dirección `workers.dev` y entra con la contraseña de administrador.
-2. En **Programar cursos**, registra un curso de prueba.
-3. Sal, entra con la contraseña de diseñador y genera la imagen del curso para confirmar que la llave de Google funciona.
+2. Con **+ Programar tarea**, crea una tarea de prueba.
+3. Sal, entra con la contraseña de diseñador y genera la imagen de esa tarea para confirmar que la llave de Google funciona.
 
 Listo. Guarda la dirección de la app en favoritos y compártela con el diseñador junto con su contraseña.

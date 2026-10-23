@@ -24,7 +24,7 @@ Listo. Quien se fue ya no puede entrar, aunque recuerde la contraseña anterior.
 
 Hazlo **antes del último día** de quien se va:
 
-1. **App:** en **Ajustes → Contraseñas**, cambia la de *Administrador* y entrégasela a quien llega. Quien llega entra y comprueba que ve las tres pestañas.
+1. **App:** en **Ajustes → Contraseñas**, cambia la de *Administrador* y entrégasela a quien llega. Quien llega entra y comprueba que ve las pestañas Programar tareas, Vista diseñador y Ajustes.
 2. **Cloudflare:** en **Manage Account → Members**, invita a quien llega como *Super Administrator*. Cuando acepte, quita al anterior. Si la cuenta usa un buzón compartido del área, basta con entregar ese acceso.
 3. **Google AI Studio / Google Cloud:** en <https://console.cloud.google.com/iam-admin/iam>, en el proyecto de la llave, agrega a quien llega como *Owner*. En **Billing → Account management**, agrégalo como *Billing Account Administrator*. Después quita al anterior. Si la tarjeta registrada era personal, cámbiala por la institucional.
 4. **GitHub:** pide a un dueño de la organización `CapacitacionDesarrolloUN` que agregue a quien llega. Si quien se va era el único dueño, primero debe hacer dueño a quien llega.
